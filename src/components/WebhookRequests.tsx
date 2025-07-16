@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Modal } from './ui/modal';
-import { Trash2, Eye, RefreshCw, Maximize2 } from 'lucide-react';
+import { Trash2, Eye, RefreshCw, Maximize2, Activity } from 'lucide-react';
 
 export default function WebhookRequests() {
   const [requests, setRequests] = useState<WebhookRequest[]>([]);
@@ -80,29 +80,44 @@ export default function WebhookRequests() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Webhook Requests</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Webhook Requests</h2>
         <div className="flex gap-2">
-          <Button onClick={fetchRequests} variant="outline" size="sm">
+          <Button 
+            onClick={fetchRequests} 
+            variant="outline" 
+            size="sm"
+            className="bg-white/80 backdrop-blur-sm border-blue-200 hover:bg-blue-50 text-gray-700"
+          >
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
-          <Button onClick={handleClearAll} variant="destructive" size="sm">
+          <Button 
+            onClick={handleClearAll} 
+            variant="destructive" 
+            size="sm"
+            className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg"
+          >
             Clear All
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm shadow-lg border-0 ring-1 ring-blue-100">
           <CardHeader>
-            <CardTitle>Recent Requests ({requests.length})</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-gray-800">
+              <div className="p-1 bg-blue-100 rounded-md">
+                <Activity className="h-4 w-4 text-blue-600" />
+              </div>
+              Recent Requests ({requests.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="text-center py-4">Loading...</div>
+              <div className="text-center py-4 text-gray-600">Loading...</div>
             ) : requests.length === 0 ? (
-              <div className="text-center py-4 text-muted-foreground">
-                No webhook requests yet. Send a POST to http://localhost:3001/webhook/your-path
+              <div className="text-center py-4 text-gray-500">
+                No webhook requests yet. Send a POST to <code className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-mono text-xs">http://localhost:3001/webhook/your-path</code>
               </div>
             ) : (
               <Table>
@@ -116,16 +131,16 @@ export default function WebhookRequests() {
                 </TableHeader>
                 <TableBody>
                   {requests.map((request) => (
-                    <TableRow key={request.id} className={selectedRequest?.id === request.id ? 'bg-muted' : ''}>
+                    <TableRow key={request.id} className={selectedRequest?.id === request.id ? 'bg-blue-50' : 'hover:bg-gray-50'}>
                       <TableCell>
-                        <Badge className={`${getMethodColor(request.method)} text-white`}>
+                        <Badge className={`${getMethodColor(request.method)} text-white shadow-sm`}>
                           {request.method}
                         </Badge>
                       </TableCell>
                       <TableCell className="font-mono text-sm">
                         {request.url}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="text-sm text-gray-500">
                         {formatTimestamp(request.timestamp)}
                       </TableCell>
                       <TableCell>
@@ -134,6 +149,7 @@ export default function WebhookRequests() {
                             onClick={() => setSelectedRequest(request)}
                             variant="ghost"
                             size="sm"
+                            className="hover:bg-blue-50 hover:text-blue-600"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -141,6 +157,7 @@ export default function WebhookRequests() {
                             onClick={() => handleDeleteRequest(request.id)}
                             variant="ghost"
                             size="sm"
+                            className="hover:bg-red-50 hover:text-red-600"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -154,59 +171,64 @@ export default function WebhookRequests() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm shadow-lg border-0 ring-1 ring-blue-100">
           <CardHeader>
-            <CardTitle>Request Details</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-gray-800">
+              <div className="p-1 bg-indigo-100 rounded-md">
+                <Eye className="h-4 w-4 text-indigo-600" />
+              </div>
+              Request Details
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {selectedRequest ? (
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-semibold mb-2">Basic Info</h4>
+                  <h4 className="font-semibold mb-2 text-gray-800">Basic Info</h4>
                   <div className="space-y-1 text-sm">
-                    <div><strong>Method:</strong> {selectedRequest.method}</div>
-                    <div><strong>URL:</strong> {selectedRequest.url}</div>
-                    <div><strong>IP:</strong> {selectedRequest.ip_address}</div>
-                    <div><strong>Time:</strong> {formatTimestamp(selectedRequest.timestamp)}</div>
+                    <div><strong className="text-gray-900">Method:</strong> <span className="text-gray-700">{selectedRequest.method}</span></div>
+                    <div><strong className="text-gray-900">URL:</strong> <span className="text-gray-700 font-mono">{selectedRequest.url}</span></div>
+                    <div><strong className="text-gray-900">IP:</strong> <span className="text-gray-700">{selectedRequest.ip_address}</span></div>
+                    <div><strong className="text-gray-900">Time:</strong> <span className="text-gray-700">{formatTimestamp(selectedRequest.timestamp)}</span></div>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-2">Headers</h4>
-                  <pre className="bg-muted p-3 rounded text-sm overflow-auto max-h-32">
+                  <h4 className="font-semibold mb-2 text-gray-800">Headers</h4>
+                  <pre className="bg-gray-50 p-3 rounded-lg text-sm overflow-auto max-h-32 border border-gray-200">
                     {formatJSON(JSON.stringify(selectedRequest.headers))}
                   </pre>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-2">Query Parameters</h4>
-                  <pre className="bg-muted p-3 rounded text-sm overflow-auto max-h-32">
+                  <h4 className="font-semibold mb-2 text-gray-800">Query Parameters</h4>
+                  <pre className="bg-gray-50 p-3 rounded-lg text-sm overflow-auto max-h-32 border border-gray-200">
                     {formatJSON(JSON.stringify(selectedRequest.query_params))}
                   </pre>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold">Body</h4>
+                    <h4 className="font-semibold text-gray-800">Body</h4>
                     {selectedRequest.body && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 hover:from-purple-600 hover:to-pink-600 shadow-sm"
                       >
                         <Maximize2 className="h-3 w-3" />
                         Full Screen
                       </Button>
                     )}
                   </div>
-                  <pre className="bg-muted p-3 rounded text-sm overflow-auto max-h-48">
+                  <pre className="bg-gray-50 p-3 rounded-lg text-sm overflow-auto max-h-48 border border-gray-200">
                     {selectedRequest.body ? formatJSON(selectedRequest.body) : 'Empty'}
                   </pre>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-gray-500">
                 Select a request to view details
               </div>
             )}
