@@ -1,0 +1,37 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model WebhookRequest {
+  id           Int      @id @default(autoincrement())
+  method       String
+  url          String
+  headers      String?
+  body         String?
+  queryParams  String?  @map("query_params")
+  timestamp    DateTime @default(now())
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+
+  @@map("webhook_requests")
+}
+
+model UrlMapping {
+  id          Int      @id @default(autoincrement())
+  webhookPath String   @unique @map("webhook_path")
+  targetUrl   String   @map("target_url")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("url_mappings")
+}
