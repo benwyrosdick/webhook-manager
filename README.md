@@ -124,6 +124,36 @@ curl -X POST https://abc123.ngrok.io/webhook/test \
 - **Reliable forwarding**: Always returns 200 to webhook providers
 - **Error handling**: Forwarding failures are logged but don't break webhook reception
 
+## Testing
+
+The project includes comprehensive tests using Vitest and React Testing Library:
+
+```bash
+# Run tests in watch mode
+yarn test
+
+# Run tests once
+yarn test:run
+
+# Run tests with UI
+yarn test:ui
+
+# Run tests with coverage
+yarn test:coverage
+```
+
+**Test Coverage:**
+- **API Service Tests**: HTTP client functionality and error handling
+- **Utility Function Tests**: Helper functions and class name utilities
+- **Component Tests**: React component rendering and user interactions
+- **Integration Tests**: App-level functionality and routing
+
+**Testing Features:**
+- **Mocked Dependencies**: Isolated unit tests with mocked fetch and external libraries
+- **User Interaction Testing**: Keyboard shortcuts, button clicks, and form submissions
+- **Error Boundary Testing**: Graceful error handling and user feedback
+- **Accessibility Testing**: ARIA attributes and keyboard navigation
+
 ## Project Structure
 
 ```
@@ -191,6 +221,7 @@ webhook-manager/
 - **Package Manager**: Yarn workspaces
 - **Tunneling**: ngrok for public webhook access
 - **Process Management**: Concurrently for multi-service startup
+- **Testing**: Vitest with React Testing Library
 
 ## Development Features
 
