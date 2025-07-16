@@ -93,12 +93,23 @@ app.all('/webhook/*', async (req, res) => {
       const result = await forwardWebhook(req, row.target_url);
       console.log('Forward result:', result);
       
+      // Always return 200 regardless of forwarding result
       if (result.success) {
-        console.log('Sending success response');
-        res.status(result.status).json(result.data);
+        console.log('Forwarding succeeded, sending acknowledgment');
+        res.status(200).json({ 
+          message: 'Webhook received and forwarded', 
+          timestamp: new Date().toISOString(),
+          forwarded: true,
+          forward_status: result.status
+        });
       } else {
-        console.log('Sending error response');
-        res.status(result.status).json({ error: result.error });
+        console.log('Forwarding failed, but still sending acknowledgment');
+        res.status(200).json({ 
+          message: 'Webhook received but forwarding failed', 
+          timestamp: new Date().toISOString(),
+          forwarded: false,
+          forward_error: result.error
+        });
       }
     } else {
       console.log('No mapping found, sending acknowledgment');
@@ -107,7 +118,12 @@ app.all('/webhook/*', async (req, res) => {
     }
   } catch (err) {
     console.error('Database error:', err);
-    res.status(500).json({ error: 'Database error' });
+    // Still return 200 to acknowledge webhook receipt
+    res.status(200).json({ 
+      message: 'Webhook received but database error occurred', 
+      timestamp: new Date().toISOString(),
+      error: 'Database error'
+    });
   }
 });
 
@@ -266,6 +282,72 @@ app.delete('/api/requests', (req, res) => {
     
     res.json({ message: `Deleted ${this.changes} requests` });
   });
+});
+
+// Resend a webhook request
+app.post('/api/requests/:id/resend', async (req, res) => {
+  try {
+    // Get the original request
+    const request = await new Promise((resolve, reject) => {
+      db.get(
+        'SELECT * FROM webhook_requests WHERE id = ?',
+        [req.params.id],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
+    });
+
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    // Extract webhook path from URL
+    const urlParts = request.url.split('/webhook/');
+    const webhookPath = urlParts[1] || '';
+
+    // Check if there's a mapping for this webhook path
+    const mapping = await new Promise((resolve, reject) => {
+      db.get(
+        'SELECT target_url FROM url_mappings WHERE webhook_path = ? AND active = 1',
+        [webhookPath],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
+    });
+
+    if (!mapping) {
+      return res.status(400).json({ error: 'No active mapping found for this webhook path' });
+    }
+
+    // Recreate the request object for forwarding
+    const mockReq = {
+      method: request.method,
+      originalUrl: request.url,
+      headers: JSON.parse(request.headers),
+      body: request.body ? (request.body.startsWith('{') ? JSON.parse(request.body) : request.body) : {},
+      query: JSON.parse(request.query_params),
+      ip: request.ip_address,
+      get: (header) => JSON.parse(request.headers)[header.toLowerCase()]
+    };
+
+    // Forward the webhook
+    const result = await forwardWebhook(mockReq, mapping.target_url);
+    
+    res.json({
+      message: 'Request resent',
+      success: result.success,
+      status: result.status,
+      error: result.error || null
+    });
+
+  } catch (err) {
+    console.error('Resend error:', err);
+    res.status(500).json({ error: 'Failed to resend request' });
+  }
 });
 
 app.listen(PORT, () => {

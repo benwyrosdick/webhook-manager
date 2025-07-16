@@ -30,6 +30,14 @@ export const api = {
     if (!response.ok) throw new Error('Failed to clear requests');
   },
 
+  resendRequest: async (id: number): Promise<{ message: string; success: boolean; status: number; error?: string }> => {
+    const response = await fetch(`${API_BASE}/api/requests/${id}/resend`, {
+      method: 'POST',
+    });
+    if (!response.ok) throw new Error('Failed to resend request');
+    return response.json();
+  },
+
   // URL mappings
   getMappings: async (): Promise<URLMapping[]> => {
     const response = await fetch(`${API_BASE}/api/mappings`);

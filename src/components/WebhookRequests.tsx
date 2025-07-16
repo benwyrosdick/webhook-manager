@@ -6,13 +6,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Modal } from './ui/modal';
-import { Trash2, Eye, RefreshCw, Maximize2, Activity } from 'lucide-react';
+import { CodeHighlighter } from './SyntaxHighlighter';
+import { Trash2, Eye, RefreshCw, Maximize2, Activity, Send } from 'lucide-react';
 
 export default function WebhookRequests() {
   const [requests, setRequests] = useState<WebhookRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<WebhookRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [resendingId, setResendingId] = useState<number | null>(null);
 
   const fetchRequests = async () => {
     try {
@@ -54,6 +56,24 @@ export default function WebhookRequests() {
     }
   };
 
+  const handleResendRequest = async (id: number) => {
+    try {
+      setResendingId(id);
+      const result = await api.resendRequest(id);
+      
+      if (result.success) {
+        alert(`Request resent successfully! Status: ${result.status}`);
+      } else {
+        alert(`Resend failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to resend request:', error);
+      alert('Failed to resend request');
+    } finally {
+      setResendingId(null);
+    }
+  };
+
   const getMethodColor = (method: string) => {
     switch (method.toUpperCase()) {
       case 'GET': return 'bg-blue-500';
@@ -69,13 +89,6 @@ export default function WebhookRequests() {
     return new Date(timestamp).toLocaleString();
   };
 
-  const formatJSON = (str: string) => {
-    try {
-      return JSON.stringify(JSON.parse(str), null, 2);
-    } catch {
-      return str;
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -154,6 +167,15 @@ export default function WebhookRequests() {
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button
+                            onClick={() => handleResendRequest(request.id)}
+                            variant="ghost"
+                            size="sm"
+                            disabled={resendingId === request.id}
+                            className="hover:bg-green-50 hover:text-green-600"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                          <Button
                             onClick={() => handleDeleteRequest(request.id)}
                             variant="ghost"
                             size="sm"
@@ -173,11 +195,25 @@ export default function WebhookRequests() {
 
         <Card className="bg-white/80 backdrop-blur-sm shadow-lg border-0 ring-1 ring-blue-100">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-800">
-              <div className="p-1 bg-indigo-100 rounded-md">
-                <Eye className="h-4 w-4 text-indigo-600" />
+            <CardTitle className="flex items-center justify-between text-gray-800">
+              <div className="flex items-center gap-2">
+                <div className="p-1 bg-indigo-100 rounded-md">
+                  <Eye className="h-4 w-4 text-indigo-600" />
+                </div>
+                Request Details
               </div>
-              Request Details
+              {selectedRequest && (
+                <Button
+                  onClick={() => handleResendRequest(selectedRequest.id)}
+                  variant="outline"
+                  size="sm"
+                  disabled={resendingId === selectedRequest.id}
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 hover:from-green-600 hover:to-emerald-600 shadow-sm"
+                >
+                  <Send className="h-3 w-3 mr-1" />
+                  {resendingId === selectedRequest.id ? 'Resending...' : 'Resend'}
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -195,16 +231,20 @@ export default function WebhookRequests() {
 
                 <div>
                   <h4 className="font-semibold mb-2 text-gray-800">Headers</h4>
-                  <pre className="bg-gray-50 p-3 rounded-lg text-sm overflow-auto max-h-32 border border-gray-200">
-                    {formatJSON(JSON.stringify(selectedRequest.headers))}
-                  </pre>
+                  <CodeHighlighter 
+                    code={JSON.stringify(selectedRequest.headers)}
+                    language="json"
+                    className="max-h-32 overflow-auto"
+                  />
                 </div>
 
                 <div>
                   <h4 className="font-semibold mb-2 text-gray-800">Query Parameters</h4>
-                  <pre className="bg-gray-50 p-3 rounded-lg text-sm overflow-auto max-h-32 border border-gray-200">
-                    {formatJSON(JSON.stringify(selectedRequest.query_params))}
-                  </pre>
+                  <CodeHighlighter 
+                    code={JSON.stringify(selectedRequest.query_params)}
+                    language="json"
+                    className="max-h-32 overflow-auto"
+                  />
                 </div>
 
                 <div>
@@ -222,9 +262,11 @@ export default function WebhookRequests() {
                       </Button>
                     )}
                   </div>
-                  <pre className="bg-gray-50 p-3 rounded-lg text-sm overflow-auto max-h-48 border border-gray-200">
-                    {selectedRequest.body ? formatJSON(selectedRequest.body) : 'Empty'}
-                  </pre>
+                  <CodeHighlighter 
+                    code={selectedRequest.body || ''}
+                    language="json"
+                    className="max-h-48 overflow-auto"
+                  />
                 </div>
               </div>
             ) : (
@@ -242,9 +284,11 @@ export default function WebhookRequests() {
         onClose={() => setIsModalOpen(false)}
         title={`Request Body - ${selectedRequest?.method} ${selectedRequest?.url}`}
       >
-        <pre className="bg-muted p-4 rounded text-sm overflow-auto whitespace-pre-wrap break-all h-full">
-          {selectedRequest?.body ? formatJSON(selectedRequest.body) : 'Empty'}
-        </pre>
+        <CodeHighlighter 
+          code={selectedRequest?.body || ''}
+          language="json"
+          className="h-full"
+        />
       </Modal>
     </div>
   );
