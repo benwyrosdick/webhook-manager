@@ -16,21 +16,25 @@ export default function WebhookRequests() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [resendingId, setResendingId] = useState<number | null>(null);
 
-  const fetchRequests = async () => {
+  const fetchRequests = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      if (isInitialLoad) {
+        setLoading(true);
+      }
       const data = await api.getRequests();
       setRequests(data);
     } catch (error) {
       console.error('Failed to fetch requests:', error);
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchRequests();
-    const interval = setInterval(fetchRequests, 5000); // Auto-refresh every 5 seconds
+    fetchRequests(true); // Initial load
+    const interval = setInterval(() => fetchRequests(false), 5000); // Auto-refresh every 5 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -96,7 +100,7 @@ export default function WebhookRequests() {
         <h2 className="text-2xl font-bold text-gray-800">Webhook Requests</h2>
         <div className="flex gap-2">
           <Button 
-            onClick={fetchRequests} 
+            onClick={() => fetchRequests(false)} 
             variant="outline" 
             size="sm"
             className="bg-white/80 backdrop-blur-sm border-blue-200 hover:bg-blue-50 text-gray-700"
