@@ -5,12 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Trash2, Eye, RefreshCw } from 'lucide-react';
+import { Modal } from './ui/modal';
+import { Trash2, Eye, RefreshCw, Maximize2 } from 'lucide-react';
 
 export default function WebhookRequests() {
   const [requests, setRequests] = useState<WebhookRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<WebhookRequest | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchRequests = async () => {
     try {
@@ -184,7 +186,20 @@ export default function WebhookRequests() {
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-2">Body</h4>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold">Body</h4>
+                    {selectedRequest.body && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex items-center gap-1"
+                      >
+                        <Maximize2 className="h-3 w-3" />
+                        Full Screen
+                      </Button>
+                    )}
+                  </div>
                   <pre className="bg-muted p-3 rounded text-sm overflow-auto max-h-48">
                     {selectedRequest.body ? formatJSON(selectedRequest.body) : 'Empty'}
                   </pre>
@@ -198,6 +213,17 @@ export default function WebhookRequests() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Full-screen Body Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={`Request Body - ${selectedRequest?.method} ${selectedRequest?.url}`}
+      >
+        <pre className="bg-muted p-4 rounded text-sm overflow-auto whitespace-pre-wrap break-all h-full">
+          {selectedRequest?.body ? formatJSON(selectedRequest.body) : 'Empty'}
+        </pre>
+      </Modal>
     </div>
   );
 }

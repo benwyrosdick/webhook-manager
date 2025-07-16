@@ -46,7 +46,7 @@ yarn dev
 yarn dev
 ```
 
-3. Open your browser and navigate to `http://localhost:3000`
+3. Open your browser and navigate to `http://localhost:8080`
 
 The backend server will run on `http://localhost:3001`
 
