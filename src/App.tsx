@@ -38,7 +38,7 @@ function App() {
             <CardContent>
               <div className="space-y-3">
                 <p className="text-sm text-gray-700">
-                  <strong className="text-gray-900">Receive webhooks:</strong> POST to <code className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-mono text-xs">http://localhost:3001/webhook/your-path</code>
+                  <strong className="text-gray-900">Receive webhooks:</strong> POST to <code className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-mono text-xs">{import.meta.env.VITE_API_BASE}/webhook/your-path</code>
                 </p>
                 <p className="text-sm text-gray-700">
                   <strong className="text-gray-900">Forward webhooks:</strong> Create URL mappings to automatically forward incoming webhooks to your target URLs

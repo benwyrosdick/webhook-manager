@@ -80,7 +80,7 @@ export default function URLMappings() {
   };
 
   const getWebhookUrl = (path: string) => {
-    return `http://localhost:3001/webhook/${path}`;
+    return `${import.meta.env.VITE_API_BASE}/webhook/${path}`;
   };
 
   return (
@@ -118,7 +118,7 @@ export default function URLMappings() {
                   className="bg-white/80"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Will be accessible at: <code className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-mono text-xs">http://localhost:3001/webhook/{newMapping.webhook_path || 'your-path'}</code>
+                  Will be accessible at: <code className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-mono text-xs">{import.meta.env.VITE_API_BASE}/webhook/{newMapping.webhook_path || 'your-path'}</code>
                 </p>
               </div>
               <div>
