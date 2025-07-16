@@ -1,6 +1,6 @@
 # Webhook Manager
 
-A modern web application for receiving, viewing, and forwarding webhooks built with Vite, React, TypeScript, Tailwind CSS, and shadcn-ui. Features a sleek gradient interface with syntax highlighting and comprehensive webhook management capabilities.
+A modern unified web application for receiving, viewing, and forwarding webhooks. Built with React, TypeScript, Tailwind CSS, Express.js, and Prisma. Features a sleek gradient interface with syntax highlighting, comprehensive webhook management, and runs as a single Node.js process.
 
 ## Features
 
@@ -10,6 +10,7 @@ A modern web application for receiving, viewing, and forwarding webhooks built w
 - **URL Mapping**: Create mappings to forward webhooks to target URLs
 - **Real-time Updates**: Auto-refresh webhook requests every 5 seconds without flashing
 - **Request Management**: Delete individual requests or clear all requests
+- **Unified Architecture**: Single Node.js process serves both API and frontend
 
 ### Advanced Features
 - **Syntax Highlighting**: JSON syntax highlighting for headers, query parameters, and request bodies
@@ -35,46 +36,36 @@ A modern web application for receiving, viewing, and forwarding webhooks built w
 ### Installation
 
 1. Clone the repository
-2. Install dependencies for both frontend and backend:
+2. Install dependencies:
 
 ```bash
-# Install frontend dependencies
 yarn install
-
-# Install backend dependencies
-cd server
-yarn install
-cd ..
 ```
 
 ### Running the Application
 
-#### Option 1: Run Both Services Together (Recommended)
+#### Development
 ```bash
-# Terminal 1: Start both frontend and backend
+# Start the unified application (frontend + backend)
 yarn dev
 
-# Terminal 2: Start ngrok tunnel (optional)
+# Optional: Start ngrok tunnel for public webhook access
 yarn dev:ngrok
 ```
 
-#### Option 2: Run Services Separately
+#### Production
 ```bash
-# Terminal 1: Start backend server
-cd server
-yarn dev
+# Build frontend and start production server
+yarn build:start
 
-# Terminal 2: Start frontend
-yarn dev
-
-# Terminal 3: Start ngrok tunnel (optional)
-yarn dev:ngrok
+# Or build and start separately
+yarn build
+yarn start
 ```
 
 ### Accessing the Application
 
-- **Frontend**: `http://localhost:8080`
-- **Backend API**: `http://localhost:3001`
+- **Application**: `http://localhost:3001` (serves both frontend and API)
 - **Public Webhook URL**: Check ngrok output for public URL
 
 ## Usage
@@ -161,20 +152,23 @@ webhook-manager/
 │   │   ├── ui/            # shadcn-ui components (button, card, table, etc.)
 │   │   ├── WebhookRequests.tsx   # Main webhook requests interface
 │   │   ├── URLMappings.tsx       # URL mapping management
-│   │   ├── SyntaxHighlighter.tsx # Code syntax highlighting
-│   │   └── Modal.tsx             # Full-screen modal component
+│   │   └── SyntaxHighlighter.tsx # Code syntax highlighting
 │   ├── services/          # API service layer
 │   │   └── api.ts         # HTTP client for backend API
 │   ├── types/             # TypeScript type definitions
 │   │   └── webhook.ts     # Webhook and mapping types
 │   └── App.tsx            # Main application component
-├── server/                # Backend Express server
-│   ├── server.js          # Main server file with webhook handling
-│   ├── database.js        # SQLite database setup and migrations
-│   └── package.json       # Backend dependencies
-├── public/                # Static assets
-│   └── webhook.svg        # Custom webhook favicon
-└── README.md
+├── server.js              # Main Express server (unified frontend + API)
+├── prisma-client.js       # Prisma database client
+├── prisma/                # Database configuration
+│   ├── schema.prisma      # Database schema
+│   └── webhook.db         # SQLite database file
+├── public/                # Built frontend files (served by Express)
+│   ├── index.html         # Main HTML file
+│   ├── assets/            # CSS and JS bundles
+│   └── *.svg              # Favicon and icons
+├── generated/             # Prisma generated client
+└── package.json           # Unified dependencies
 ```
 
 ## API Endpoints
@@ -210,16 +204,18 @@ webhook-manager/
 
 ### Backend
 - **Runtime**: Node.js with Express.js
-- **Database**: SQLite3 with custom schema
+- **Database**: SQLite with Prisma ORM
 - **HTTP Client**: Axios for webhook forwarding
 - **CORS**: Enabled for cross-origin requests
+- **Architecture**: Unified server serving both API and frontend
 
 ### Development Tools
 - **Bundler**: Vite with hot module replacement
-- **Package Manager**: Yarn workspaces
+- **Package Manager**: Yarn with unified dependencies
 - **Tunneling**: ngrok for public webhook access
-- **Process Management**: Concurrently for multi-service startup
+- **Development Server**: Nodemon for auto-restart
 - **Testing**: Vitest with React Testing Library
+- **Database**: Prisma for type-safe database operations
 
 ## Development Features
 
