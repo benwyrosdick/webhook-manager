@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { Trash2, Edit, Plus, Save, X, ExternalLink } from 'lucide-react';
+import { Trash2, Edit, Plus, Save, X, ExternalLink, Settings } from 'lucide-react';
 
 export default function URLMappings() {
   const [mappings, setMappings] = useState<URLMapping[]>([]);
@@ -86,45 +86,63 @@ export default function URLMappings() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">URL Mappings</h2>
-        <Button onClick={() => setShowAddForm(true)} disabled={showAddForm}>
+        <h2 className="text-2xl font-bold text-gray-800">URL Mappings</h2>
+        <Button 
+          onClick={() => setShowAddForm(true)} 
+          disabled={showAddForm}
+          className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Mapping
         </Button>
       </div>
 
       {showAddForm && (
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm shadow-lg border-0 ring-1 ring-blue-100">
           <CardHeader>
-            <CardTitle>Create New Mapping</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-gray-800">
+              <div className="p-1 bg-green-100 rounded-md">
+                <Plus className="h-4 w-4 text-green-600" />
+              </div>
+              Create New Mapping
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium">Webhook Path</label>
+                <label className="text-sm font-medium text-gray-700">Webhook Path</label>
                 <Input
                   placeholder="e.g., my-webhook"
                   value={newMapping.webhook_path}
                   onChange={(e) => setNewMapping({ ...newMapping, webhook_path: e.target.value })}
+                  className="bg-white/80"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Will be accessible at: http://localhost:3001/webhook/{newMapping.webhook_path || 'your-path'}
+                <p className="text-xs text-gray-500 mt-1">
+                  Will be accessible at: <code className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-mono text-xs">http://localhost:3001/webhook/{newMapping.webhook_path || 'your-path'}</code>
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium">Target URL</label>
+                <label className="text-sm font-medium text-gray-700">Target URL</label>
                 <Input
                   placeholder="https://example.com/webhook"
                   value={newMapping.target_url}
                   onChange={(e) => setNewMapping({ ...newMapping, target_url: e.target.value })}
+                  className="bg-white/80"
                 />
               </div>
               <div className="flex gap-2">
-                <Button onClick={handleCreateMapping}>
+                <Button 
+                  onClick={handleCreateMapping}
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
+                >
                   <Save className="h-4 w-4 mr-2" />
                   Create
                 </Button>
-                <Button variant="outline" onClick={() => setShowAddForm(false)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowAddForm(false)}
+                  className="bg-white/80 backdrop-blur-sm border-gray-200 hover:bg-gray-50 text-gray-700"
+                >
                   <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
@@ -134,13 +152,18 @@ export default function URLMappings() {
         </Card>
       )}
 
-      <Card>
+      <Card className="bg-white/80 backdrop-blur-sm shadow-lg border-0 ring-1 ring-blue-100">
         <CardHeader>
-          <CardTitle>Active Mappings ({mappings.length})</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-gray-800">
+            <div className="p-1 bg-blue-100 rounded-md">
+              <Settings className="h-4 w-4 text-blue-600" />
+            </div>
+            Active Mappings ({mappings.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {mappings.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-gray-500">
               No URL mappings configured. Create one to start forwarding webhooks.
             </div>
           ) : (
@@ -156,18 +179,18 @@ export default function URLMappings() {
               </TableHeader>
               <TableBody>
                 {mappings.map((mapping) => (
-                  <TableRow key={mapping.id}>
+                  <TableRow key={mapping.id} className="hover:bg-gray-50">
                     <TableCell>
                       {editingId === mapping.id ? (
                         <Input
                           value={editData.webhook_path || ''}
                           onChange={(e) => setEditData({ ...editData, webhook_path: e.target.value })}
-                          className="w-full"
+                          className="w-full bg-white/80"
                         />
                       ) : (
                         <div className="space-y-1">
                           <div className="font-mono text-sm">{mapping.webhook_path}</div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                          <div className="text-xs text-gray-500 flex items-center gap-1">
                             {getWebhookUrl(mapping.webhook_path)}
                             <ExternalLink className="h-3 w-3" />
                           </div>
@@ -179,7 +202,7 @@ export default function URLMappings() {
                         <Input
                           value={editData.target_url || ''}
                           onChange={(e) => setEditData({ ...editData, target_url: e.target.value })}
-                          className="w-full"
+                          className="w-full bg-white/80"
                         />
                       ) : (
                         <div className="font-mono text-sm break-all">
@@ -203,7 +226,7 @@ export default function URLMappings() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-sm text-gray-500">
                       {formatTimestamp(mapping.created_at)}
                     </TableCell>
                     <TableCell>
@@ -214,6 +237,7 @@ export default function URLMappings() {
                               onClick={() => handleUpdateMapping(mapping.id)}
                               variant="ghost"
                               size="sm"
+                              className="hover:bg-green-50 hover:text-green-600"
                             >
                               <Save className="h-4 w-4" />
                             </Button>
@@ -221,6 +245,7 @@ export default function URLMappings() {
                               onClick={cancelEditing}
                               variant="ghost"
                               size="sm"
+                              className="hover:bg-gray-50 hover:text-gray-600"
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -231,6 +256,7 @@ export default function URLMappings() {
                               onClick={() => startEditing(mapping)}
                               variant="ghost"
                               size="sm"
+                              className="hover:bg-blue-50 hover:text-blue-600"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -238,6 +264,7 @@ export default function URLMappings() {
                               onClick={() => handleDeleteMapping(mapping.id)}
                               variant="ghost"
                               size="sm"
+                              className="hover:bg-red-50 hover:text-red-600"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
