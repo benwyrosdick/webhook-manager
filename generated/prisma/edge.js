@@ -171,7 +171,6 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
-  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
@@ -182,7 +181,7 @@ const config = {
   },
   "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel WebhookRequest {\n  id          Int      @id @default(autoincrement())\n  method      String\n  url         String\n  headers     String?\n  body        String?\n  queryParams String?  @map(\"query_params\")\n  timestamp   DateTime @default(now())\n  ipAddress   String?  @map(\"ip_address\")\n  userAgent   String?  @map(\"user_agent\")\n\n  @@map(\"webhook_requests\")\n}\n\nmodel UrlMapping {\n  id          Int      @id @default(autoincrement())\n  webhookPath String   @unique @map(\"webhook_path\")\n  targetUrl   String   @map(\"target_url\")\n  active      Boolean  @default(true)\n  createdAt   DateTime @default(now()) @map(\"created_at\")\n  updatedAt   DateTime @updatedAt @map(\"updated_at\")\n\n  @@map(\"url_mappings\")\n}\n",
   "inlineSchemaHash": "fead33acaf3ffcd55005fc9903bb83f25f1bba85b6d669b8d5862c4e0e1c9c55",
-  "copyEngine": true
+  "copyEngine": false
 }
 config.dirname = '/'
 
