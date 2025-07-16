@@ -32,6 +32,7 @@ A modern unified web application for receiving, viewing, and forwarding webhooks
 
 - Node.js (v20.14.0 or higher)
 - Yarn package manager
+- PostgreSQL database (local or hosted)
 
 ### Installation
 
@@ -40,6 +41,21 @@ A modern unified web application for receiving, viewing, and forwarding webhooks
 
 ```bash
 yarn install
+```
+
+3. Set up your database configuration:
+
+Create a `.env.local` file in the root directory with your PostgreSQL connection string:
+
+```bash
+DATABASE_URL="postgresql://username:password@localhost:5432/webhook_manager"
+```
+
+4. Initialize the database:
+
+```bash
+yarn prisma:migrate
+yarn prisma:generate
 ```
 
 ### Running the Application
@@ -67,6 +83,7 @@ yarn start
 
 - **Application**: `http://localhost:3001` (serves both frontend and API)
 - **Public Webhook URL**: Check ngrok output for public URL
+- **Database Admin**: `yarn prisma:studio` (optional - opens Prisma Studio)
 
 ## Usage
 
@@ -143,6 +160,33 @@ yarn test:coverage
 - **Error Boundary Testing**: Graceful error handling and user feedback
 - **Accessibility Testing**: ARIA attributes and keyboard navigation
 
+## Database Management
+
+The application uses PostgreSQL with Prisma ORM for robust data management:
+
+### Database Scripts
+```bash
+# Run database migrations
+yarn prisma:migrate
+
+# Generate Prisma client after schema changes
+yarn prisma:generate
+
+# Open Prisma Studio (database admin UI)
+yarn prisma:studio
+```
+
+### Schema Management
+- **Migrations**: All database changes are versioned and tracked
+- **Type Safety**: Prisma generates TypeScript types from your schema
+- **Admin Interface**: Prisma Studio provides a web-based database browser
+
+### Environment Configuration
+Database connection is configured via `.env.local`:
+```bash
+DATABASE_URL="postgresql://username:password@host:port/database"
+```
+
 ## Project Structure
 
 ```
@@ -162,7 +206,7 @@ webhook-manager/
 ├── prisma-client.js       # Prisma database client
 ├── prisma/                # Database configuration
 │   ├── schema.prisma      # Database schema
-│   └── webhook.db         # SQLite database file
+│   └── migrations/        # Database migration files
 ├── public/                # Built frontend files (served by Express)
 │   ├── index.html         # Main HTML file
 │   ├── assets/            # CSS and JS bundles
@@ -204,7 +248,7 @@ webhook-manager/
 
 ### Backend
 - **Runtime**: Node.js with Express.js
-- **Database**: SQLite with Prisma ORM
+- **Database**: PostgreSQL with Prisma ORM
 - **HTTP Client**: Axios for webhook forwarding
 - **CORS**: Enabled for cross-origin requests
 - **Architecture**: Unified server serving both API and frontend
@@ -216,6 +260,7 @@ webhook-manager/
 - **Development Server**: Nodemon for auto-restart
 - **Testing**: Vitest with React Testing Library
 - **Database**: Prisma for type-safe database operations
+- **Environment Variables**: dotenv-cli for secure credential loading
 
 ## Development Features
 
