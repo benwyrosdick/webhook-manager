@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import axios from 'axios';
-import db from './database.js';
+import prisma from './prisma-client.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -13,23 +13,22 @@ app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.text({ type: '*/*', limit: '10mb' }));
 
 // Store webhook request
-const storeWebhookRequest = (req) => {
-  const stmt = db.prepare(`
-    INSERT INTO webhook_requests (method, url, headers, body, query_params, ip_address, user_agent)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  
-  stmt.run(
-    req.method,
-    req.originalUrl,
-    JSON.stringify(req.headers),
-    typeof req.body === 'string' ? req.body : JSON.stringify(req.body),
-    JSON.stringify(req.query),
-    req.ip,
-    req.get('User-Agent') || ''
-  );
-  
-  stmt.finalize();
+const storeWebhookRequest = async (req) => {
+  try {
+    await prisma.webhookRequest.create({
+      data: {
+        method: req.method,
+        url: req.originalUrl,
+        headers: JSON.stringify(req.headers),
+        body: typeof req.body === 'string' ? req.body : JSON.stringify(req.body),
+        queryParams: JSON.stringify(req.query),
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent') || ''
+      }
+    });
+  } catch (error) {
+    console.error('Failed to store webhook request:', error);
+  }
 };
 
 // Forward webhook to target URL
@@ -70,27 +69,26 @@ app.all('/webhook/*', async (req, res) => {
   console.log(`Received ${req.method} request for webhook path: ${webhookPath}`);
   
   // Store the request
-  storeWebhookRequest(req);
+  await storeWebhookRequest(req);
   console.log('Request stored in database');
   
   try {
     // Check if there's a mapping for this webhook path
     console.log('Checking for URL mapping...');
-    const row = await new Promise((resolve, reject) => {
-      db.get(
-        'SELECT target_url FROM url_mappings WHERE webhook_path = ? AND active = 1',
-        [webhookPath],
-        (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        }
-      );
+    const mapping = await prisma.urlMapping.findFirst({
+      where: {
+        webhookPath: webhookPath,
+        active: true
+      },
+      select: {
+        targetUrl: true
+      }
     });
     
-    if (row) {
-      console.log(`Found mapping, target URL: ${row.target_url}`);
+    if (mapping) {
+      console.log(`Found mapping, target URL: ${mapping.targetUrl}`);
       // Forward the webhook
-      const result = await forwardWebhook(req, row.target_url);
+      const result = await forwardWebhook(req, mapping.targetUrl);
       console.log('Forward result:', result);
       
       // Always return 200 regardless of forwarding result
@@ -130,173 +128,199 @@ app.all('/webhook/*', async (req, res) => {
 // API Routes
 
 // Get all webhook requests
-app.get('/api/requests', (req, res) => {
-  const limit = parseInt(req.query.limit) || 100;
-  const offset = parseInt(req.query.offset) || 0;
-  
-  db.all(
-    'SELECT * FROM webhook_requests ORDER BY timestamp DESC LIMIT ? OFFSET ?',
-    [limit, offset],
-    (err, rows) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      
-      // Parse JSON strings back to objects
-      const requests = rows.map(row => ({
-        ...row,
-        headers: JSON.parse(row.headers),
-        query_params: JSON.parse(row.query_params),
-      }));
-      
-      res.json(requests);
-    }
-  );
+app.get('/api/requests', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = parseInt(req.query.offset) || 0;
+    
+    const requests = await prisma.webhookRequest.findMany({
+      orderBy: {
+        timestamp: 'desc'
+      },
+      take: limit,
+      skip: offset
+    });
+    
+    // Parse JSON strings back to objects
+    const parsedRequests = requests.map(row => ({
+      ...row,
+      headers: JSON.parse(row.headers || '{}'),
+      query_params: JSON.parse(row.queryParams || '{}'),
+      // Map Prisma fields to expected API fields
+      ip_address: row.ipAddress,
+      user_agent: row.userAgent,
+      query_params: JSON.parse(row.queryParams || '{}')
+    }));
+    
+    res.json(parsedRequests);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Get single webhook request
-app.get('/api/requests/:id', (req, res) => {
-  db.get(
-    'SELECT * FROM webhook_requests WHERE id = ?',
-    [req.params.id],
-    (err, row) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
+app.get('/api/requests/:id', async (req, res) => {
+  try {
+    const request = await prisma.webhookRequest.findUnique({
+      where: {
+        id: parseInt(req.params.id)
       }
-      
-      if (!row) {
-        return res.status(404).json({ error: 'Request not found' });
-      }
-      
-      const request = {
-        ...row,
-        headers: JSON.parse(row.headers),
-        query_params: JSON.parse(row.query_params),
-      };
-      
-      res.json(request);
+    });
+    
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
     }
-  );
+    
+    // Parse JSON strings and map fields
+    const parsedRequest = {
+      ...request,
+      headers: JSON.parse(request.headers || '{}'),
+      query_params: JSON.parse(request.queryParams || '{}'),
+      ip_address: request.ipAddress,
+      user_agent: request.userAgent
+    };
+    
+    res.json(parsedRequest);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Get all URL mappings
-app.get('/api/mappings', (req, res) => {
-  db.all('SELECT * FROM url_mappings ORDER BY created_at DESC', (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
+app.get('/api/mappings', async (req, res) => {
+  try {
+    const mappings = await prisma.urlMapping.findMany({
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    
+    // Map Prisma fields to expected API fields
+    const parsedMappings = mappings.map(mapping => ({
+      ...mapping,
+      webhook_path: mapping.webhookPath,
+      target_url: mapping.targetUrl,
+      created_at: mapping.createdAt,
+      updated_at: mapping.updatedAt
+    }));
+    
+    res.json(parsedMappings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Create URL mapping
-app.post('/api/mappings', (req, res) => {
+app.post('/api/mappings', async (req, res) => {
   const { webhook_path, target_url } = req.body;
   
   if (!webhook_path || !target_url) {
     return res.status(400).json({ error: 'webhook_path and target_url are required' });
   }
   
-  const stmt = db.prepare(`
-    INSERT INTO url_mappings (webhook_path, target_url)
-    VALUES (?, ?)
-  `);
-  
-  stmt.run(webhook_path, target_url, function(err) {
-    if (err) {
-      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-        return res.status(409).json({ error: 'Webhook path already exists' });
+  try {
+    const mapping = await prisma.urlMapping.create({
+      data: {
+        webhookPath: webhook_path,
+        targetUrl: target_url
       }
-      return res.status(500).json({ error: err.message });
-    }
+    });
     
     res.status(201).json({ 
-      id: this.lastID, 
-      webhook_path, 
-      target_url,
-      active: true,
-      created_at: new Date().toISOString()
+      id: mapping.id, 
+      webhook_path: mapping.webhookPath, 
+      target_url: mapping.targetUrl,
+      active: mapping.active,
+      created_at: mapping.createdAt
     });
-  });
-  
-  stmt.finalize();
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: 'Webhook path already exists' });
+    }
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Update URL mapping
-app.put('/api/mappings/:id', (req, res) => {
+app.put('/api/mappings/:id', async (req, res) => {
   const { webhook_path, target_url, active } = req.body;
   
-  db.run(
-    'UPDATE url_mappings SET webhook_path = ?, target_url = ?, active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-    [webhook_path, target_url, active, req.params.id],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
+  try {
+    const mapping = await prisma.urlMapping.update({
+      where: {
+        id: parseInt(req.params.id)
+      },
+      data: {
+        webhookPath: webhook_path,
+        targetUrl: target_url,
+        active: active
       }
-      
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Mapping not found' });
-      }
-      
-      res.json({ message: 'Mapping updated successfully' });
+    });
+    
+    res.json({ message: 'Mapping updated successfully' });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Mapping not found' });
     }
-  );
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Delete URL mapping
-app.delete('/api/mappings/:id', (req, res) => {
-  db.run('DELETE FROM url_mappings WHERE id = ?', [req.params.id], function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Mapping not found' });
-    }
+app.delete('/api/mappings/:id', async (req, res) => {
+  try {
+    await prisma.urlMapping.delete({
+      where: {
+        id: parseInt(req.params.id)
+      }
+    });
     
     res.json({ message: 'Mapping deleted successfully' });
-  });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Mapping not found' });
+    }
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Delete webhook request
-app.delete('/api/requests/:id', (req, res) => {
-  db.run('DELETE FROM webhook_requests WHERE id = ?', [req.params.id], function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Request not found' });
-    }
+app.delete('/api/requests/:id', async (req, res) => {
+  try {
+    await prisma.webhookRequest.delete({
+      where: {
+        id: parseInt(req.params.id)
+      }
+    });
     
     res.json({ message: 'Request deleted successfully' });
-  });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Clear all webhook requests
-app.delete('/api/requests', (req, res) => {
-  db.run('DELETE FROM webhook_requests', function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+app.delete('/api/requests', async (req, res) => {
+  try {
+    const result = await prisma.webhookRequest.deleteMany({});
     
-    res.json({ message: `Deleted ${this.changes} requests` });
-  });
+    res.json({ message: `Deleted ${result.count} requests` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Resend a webhook request
 app.post('/api/requests/:id/resend', async (req, res) => {
   try {
     // Get the original request
-    const request = await new Promise((resolve, reject) => {
-      db.get(
-        'SELECT * FROM webhook_requests WHERE id = ?',
-        [req.params.id],
-        (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        }
-      );
+    const request = await prisma.webhookRequest.findUnique({
+      where: {
+        id: parseInt(req.params.id)
+      }
     });
 
     if (!request) {
@@ -308,15 +332,14 @@ app.post('/api/requests/:id/resend', async (req, res) => {
     const webhookPath = urlParts[1] || '';
 
     // Check if there's a mapping for this webhook path
-    const mapping = await new Promise((resolve, reject) => {
-      db.get(
-        'SELECT target_url FROM url_mappings WHERE webhook_path = ? AND active = 1',
-        [webhookPath],
-        (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        }
-      );
+    const mapping = await prisma.urlMapping.findFirst({
+      where: {
+        webhookPath: webhookPath,
+        active: true
+      },
+      select: {
+        targetUrl: true
+      }
     });
 
     if (!mapping) {
@@ -327,15 +350,15 @@ app.post('/api/requests/:id/resend', async (req, res) => {
     const mockReq = {
       method: request.method,
       originalUrl: request.url,
-      headers: JSON.parse(request.headers),
+      headers: JSON.parse(request.headers || '{}'),
       body: request.body ? (request.body.startsWith('{') ? JSON.parse(request.body) : request.body) : {},
-      query: JSON.parse(request.query_params),
-      ip: request.ip_address,
-      get: (header) => JSON.parse(request.headers)[header.toLowerCase()]
+      query: JSON.parse(request.queryParams || '{}'),
+      ip: request.ipAddress,
+      get: (header) => JSON.parse(request.headers || '{}')[header.toLowerCase()]
     };
 
     // Forward the webhook
-    const result = await forwardWebhook(mockReq, mapping.target_url);
+    const result = await forwardWebhook(mockReq, mapping.targetUrl);
     
     res.json({
       message: 'Request resent',
