@@ -51,14 +51,12 @@ cd ..
 
 #### Option 1: Run Both Services Together (Recommended)
 ```bash
-# Start both frontend and backend with ngrok tunnel
+# Terminal 1: Start both frontend and backend
 yarn dev
-```
 
-This will start:
-- Frontend on `http://localhost:8080` (or next available port)
-- Backend on `http://localhost:3001`
-- ngrok tunnel for public webhook access
+# Terminal 2: Start ngrok tunnel (optional)
+yarn dev:ngrok
+```
 
 #### Option 2: Run Services Separately
 ```bash
