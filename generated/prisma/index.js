@@ -87,6 +87,9 @@ Prisma.NullTypes = {
  * Enums
  */
 exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
+  ReadUncommitted: 'ReadUncommitted',
+  ReadCommitted: 'ReadCommitted',
+  RepeatableRead: 'RepeatableRead',
   Serializable: 'Serializable'
 });
 
@@ -114,6 +117,11 @@ exports.Prisma.UrlMappingScalarFieldEnum = {
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
+};
+
+exports.Prisma.QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
 };
 
 exports.Prisma.NullsOrder = {
@@ -155,8 +163,7 @@ const config = {
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": "../../.env",
-    "schemaEnvPath": "../../.env"
+    "rootEnvPath": null
   },
   "relativePath": "../../prisma",
   "clientVersion": "6.12.0",
@@ -164,7 +171,7 @@ const config = {
   "datasourceNames": [
     "db"
   ],
-  "activeProvider": "sqlite",
+  "activeProvider": "postgresql",
   "postinstall": false,
   "inlineDatasources": {
     "db": {
@@ -174,8 +181,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../generated/prisma\"\n}\n\ndatasource db {\n  provider = \"sqlite\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel WebhookRequest {\n  id          Int      @id @default(autoincrement())\n  method      String\n  url         String\n  headers     String?\n  body        String?\n  queryParams String?  @map(\"query_params\")\n  timestamp   DateTime @default(now())\n  ipAddress   String?  @map(\"ip_address\")\n  userAgent   String?  @map(\"user_agent\")\n\n  @@map(\"webhook_requests\")\n}\n\nmodel UrlMapping {\n  id          Int      @id @default(autoincrement())\n  webhookPath String   @unique @map(\"webhook_path\")\n  targetUrl   String   @map(\"target_url\")\n  active      Boolean  @default(true)\n  createdAt   DateTime @default(now()) @map(\"created_at\")\n  updatedAt   DateTime @updatedAt @map(\"updated_at\")\n\n  @@map(\"url_mappings\")\n}\n",
-  "inlineSchemaHash": "931aa7db8cd49b13832bfac7c0b69e6028913bf50804f34a8abb67398d17331a",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel WebhookRequest {\n  id          Int      @id @default(autoincrement())\n  method      String\n  url         String\n  headers     String?\n  body        String?\n  queryParams String?  @map(\"query_params\")\n  timestamp   DateTime @default(now())\n  ipAddress   String?  @map(\"ip_address\")\n  userAgent   String?  @map(\"user_agent\")\n\n  @@map(\"webhook_requests\")\n}\n\nmodel UrlMapping {\n  id          Int      @id @default(autoincrement())\n  webhookPath String   @unique @map(\"webhook_path\")\n  targetUrl   String   @map(\"target_url\")\n  active      Boolean  @default(true)\n  createdAt   DateTime @default(now()) @map(\"created_at\")\n  updatedAt   DateTime @updatedAt @map(\"updated_at\")\n\n  @@map(\"url_mappings\")\n}\n",
+  "inlineSchemaHash": "fead33acaf3ffcd55005fc9903bb83f25f1bba85b6d669b8d5862c4e0e1c9c55",
   "copyEngine": true
 }
 
