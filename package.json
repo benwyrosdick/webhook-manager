@@ -8,7 +8,7 @@
     "dev:frontend": "vite",
     "dev": "concurrently \"yarn dev:frontend\" \"yarn dev:backend\"",
     "start": "node server.js",
-    "build": "npx vite build && cp dist/index.html public/ && cp -r dist/assets public/ && cp dist/*.svg public/",
+    "build": "npx vite build && cp dist/index.html public/ && cp -r dist/assets public/",
     "build:start": "yarn build && yarn start",
     "dev:ngrok": "ngrok http 3001",
     "prisma:migrate": "dotenv -e .env.local -- npx prisma migrate dev",
