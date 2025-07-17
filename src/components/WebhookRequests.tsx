@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Modal } from './ui/modal';
 import { CodeHighlighter } from './SyntaxHighlighter';
-import { Trash2, Eye, RefreshCw, Maximize2, Activity, Send } from 'lucide-react';
+import { Trash2, Eye, RefreshCw, Maximize2, Activity, Send, Copy } from 'lucide-react';
 
 export default function WebhookRequests() {
   const [requests, setRequests] = useState<WebhookRequest[]>([]);
@@ -75,6 +75,46 @@ export default function WebhookRequests() {
       alert('Failed to resend request');
     } finally {
       setResendingId(null);
+    }
+  };
+
+  const handleCopyCurl = async (request: WebhookRequest) => {
+    try {
+      // Get the mapping for this webhook path
+      const mappings = await api.getMappings();
+      const webhookPath = request.url.split('/webhook/')[1] || '';
+      const mapping = mappings.find(m => m.webhook_path === webhookPath && m.active);
+      
+      if (!mapping) {
+        alert('No active mapping found for this webhook path');
+        return;
+      }
+
+      // Build curl command
+      const headers = typeof request.headers === 'string' 
+        ? JSON.parse(request.headers) 
+        : request.headers;
+      
+      let curlCommand = `curl -X ${request.method} '${mapping.target_url}'`;
+      
+      // Add headers (skip host and connection headers)
+      Object.entries(headers).forEach(([key, value]) => {
+        if (!['host', 'connection', 'content-length'].includes(key.toLowerCase())) {
+          curlCommand += ` \\\n  -H '${key}: ${value}'`;
+        }
+      });
+      
+      // Add body if present
+      if (request.body) {
+        curlCommand += ` \\\n  -d '${request.body}'`;
+      }
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(curlCommand);
+      alert('cURL command copied to clipboard!');
+    } catch (error) {
+      console.error('Failed to copy cURL command:', error);
+      alert('Failed to copy cURL command');
     }
   };
 
@@ -207,16 +247,27 @@ export default function WebhookRequests() {
                 Request Details
               </div>
               {selectedRequest && (
-                <Button
-                  onClick={() => handleResendRequest(selectedRequest.id)}
-                  variant="outline"
-                  size="sm"
-                  disabled={resendingId === selectedRequest.id}
-                  className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 hover:from-green-600 hover:to-emerald-600 shadow-sm"
-                >
-                  <Send className="h-3 w-3 mr-1" />
-                  {resendingId === selectedRequest.id ? 'Resending...' : 'Resend'}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleResendRequest(selectedRequest.id)}
+                    variant="outline"
+                    size="sm"
+                    disabled={resendingId === selectedRequest.id}
+                    className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 hover:from-green-600 hover:to-emerald-600 shadow-sm"
+                  >
+                    <Send className="h-3 w-3 mr-1" />
+                    {resendingId === selectedRequest.id ? 'Resending...' : 'Resend'}
+                  </Button>
+                  <Button
+                    onClick={() => handleCopyCurl(selectedRequest)}
+                    variant="outline"
+                    size="sm"
+                    className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 hover:from-blue-600 hover:to-cyan-600 shadow-sm"
+                  >
+                    <Copy className="h-3 w-3 mr-1" />
+                    Copy cURL
+                  </Button>
+                </div>
               )}
             </CardTitle>
           </CardHeader>
