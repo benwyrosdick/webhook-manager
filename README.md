@@ -16,6 +16,7 @@ A modern unified web application for receiving, viewing, and forwarding webhooks
 - **Syntax Highlighting**: JSON syntax highlighting for headers, query parameters, and request bodies
 - **Full-screen Modal**: View request bodies in a full-screen modal with syntax highlighting
 - **Resend Functionality**: Resend any webhook request to its mapped endpoint
+- **Copy cURL Command**: Generate and copy cURL commands for mapped requests to clipboard
 - **Reliable Webhook Handling**: Always returns 200 status to webhook providers, even on forwarding errors
 - **ngrok Integration**: Built-in ngrok tunnel for exposing local webhooks publicly
 
@@ -51,6 +52,19 @@ Create a `.env.local` file in the root directory with your PostgreSQL connection
 DATABASE_URL="postgresql://username:password@localhost:5432/webhook_manager"
 ```
 
+**For local PostgreSQL setup:**
+```bash
+# Install PostgreSQL (macOS)
+brew install postgresql
+brew services start postgresql
+
+# Create database
+createdb webhook_manager
+
+# Your DATABASE_URL would be:
+DATABASE_URL="postgresql://yourusername@localhost:5432/webhook_manager"
+```
+
 4. Initialize the database:
 
 ```bash
@@ -60,13 +74,26 @@ yarn prisma:generate
 
 ### Running the Application
 
-#### Development
+#### Development (Recommended)
 ```bash
-# Start the unified application (frontend + backend)
+# Start both frontend and backend with hot reload
 yarn dev
+
+# This runs:
+# - Frontend: http://localhost:8080 (with hot reload)
+# - Backend: http://localhost:3001 (with auto-restart)
 
 # Optional: Start ngrok tunnel for public webhook access
 yarn dev:ngrok
+```
+
+#### Alternative Development (Unified)
+```bash
+# Start unified server (requires manual rebuild after frontend changes)
+yarn dev:backend
+
+# Then rebuild frontend when needed:
+yarn build
 ```
 
 #### Production
@@ -81,6 +108,12 @@ yarn start
 
 ### Accessing the Application
 
+**Development:**
+- **Frontend**: `http://localhost:8080` (with hot reload)
+- **Backend API**: `http://localhost:3001`
+- **Webhooks**: `http://localhost:3001/webhook/your-path`
+
+**Production:**
 - **Application**: `http://localhost:3001` (serves both frontend and API)
 - **Public Webhook URL**: Check ngrok output for public URL
 - **Database Admin**: `yarn prisma:studio` (optional - opens Prisma Studio)
@@ -114,7 +147,8 @@ curl -X POST https://abc123.ngrok.io/webhook/test \
    - Syntax-highlighted request body
 3. **Full-screen View**: Click "Full Screen" to view request bodies in a modal
 4. **Resend Requests**: Click the send icon to resend any request to its mapped endpoint
-5. **Delete Requests**: Remove individual requests or clear all requests
+5. **Copy cURL**: Click "Copy cURL" to generate and copy a cURL command for the mapped endpoint
+6. **Delete Requests**: Remove individual requests or clear all requests
 
 ### URL Mappings
 
@@ -186,6 +220,8 @@ Database connection is configured via `.env.local`:
 ```bash
 DATABASE_URL="postgresql://username:password@host:port/database"
 ```
+
+**Important**: Never commit `.env.local` to version control. It's already included in `.gitignore`.
 
 ## Project Structure
 
@@ -261,6 +297,7 @@ webhook-manager/
 - **Testing**: Vitest with React Testing Library
 - **Database**: Prisma for type-safe database operations
 - **Environment Variables**: dotenv-cli for secure credential loading
+- **Process Management**: Concurrently for running multiple dev servers
 
 ## Development Features
 
