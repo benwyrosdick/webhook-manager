@@ -6,7 +6,7 @@
   "scripts": {
     "dev:backend": "dotenv -- nodemon server.js",
     "dev:frontend": "dotenv -- vite",
-    "dev": "concurrently \"yarn dev:frontend\" \"yarn dev:backend\"",
+    "dev": "dotenv -- concurrently \"yarn dev:frontend\" \"yarn dev:backend\"",
     "start": "node server.js",
     "build": "npx vite build && cp dist/index.html public/ && cp -r dist/assets public/",
     "build:start": "yarn build && yarn start",

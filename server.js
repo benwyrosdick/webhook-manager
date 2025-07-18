@@ -157,6 +157,7 @@ app.get('/api/requests', async (req, res) => {
     
     res.json(parsedRequests);
   } catch (error) {
+    console.error({ error: error.message })
     res.status(500).json({ error: error.message });
   }
 });
