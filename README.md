@@ -46,7 +46,7 @@ yarn install
 
 3. Set up your database configuration:
 
-Create a `.env.local` file in the root directory with your PostgreSQL connection string:
+Create a `.env` file in the root directory with your PostgreSQL connection string:
 
 ```bash
 DATABASE_URL="postgresql://username:password@localhost:5432/webhook_manager"

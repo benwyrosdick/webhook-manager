@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Modal } from './ui/modal';
+import { ToastContainer, useToast } from './ui/toast';
 import { CodeHighlighter } from './SyntaxHighlighter';
 import { Trash2, Eye, RefreshCw, Maximize2, Activity, Send, Copy } from 'lucide-react';
 
@@ -15,6 +16,7 @@ export default function WebhookRequests() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [resendingId, setResendingId] = useState<number | null>(null);
+  const { toasts, removeToast, success, error } = useToast();
 
   const fetchRequests = async (isInitialLoad = false) => {
     try {
@@ -66,13 +68,13 @@ export default function WebhookRequests() {
       const result = await api.resendRequest(id);
       
       if (result.success) {
-        alert(`Request resent successfully! Status: ${result.status}`);
+        success('Request resent successfully!', `Status: ${result.status}`);
       } else {
-        alert(`Resend failed: ${result.error}`);
+        error('Resend failed', result.error);
       }
-    } catch (error) {
-      console.error('Failed to resend request:', error);
-      alert('Failed to resend request');
+    } catch (err) {
+      console.error('Failed to resend request:', err);
+      error('Failed to resend request', 'Please try again');
     } finally {
       setResendingId(null);
     }
@@ -86,7 +88,7 @@ export default function WebhookRequests() {
       const mapping = mappings.find(m => m.webhook_path === webhookPath && m.active);
       
       if (!mapping) {
-        alert('No active mapping found for this webhook path');
+        error('No active mapping found', 'Create a URL mapping for this webhook path first');
         return;
       }
 
@@ -111,10 +113,10 @@ export default function WebhookRequests() {
 
       // Copy to clipboard
       await navigator.clipboard.writeText(curlCommand);
-      alert('cURL command copied to clipboard!');
-    } catch (error) {
-      console.error('Failed to copy cURL command:', error);
-      alert('Failed to copy cURL command');
+      success('cURL command copied!', 'Ready to paste in your terminal');
+    } catch (err) {
+      console.error('Failed to copy cURL command:', err);
+      error('Failed to copy cURL command', 'Please try again');
     }
   };
 
@@ -345,6 +347,9 @@ export default function WebhookRequests() {
           className="h-full"
         />
       </Modal>
+
+      {/* Toast notifications */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }
