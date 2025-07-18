@@ -1,2 +1,2 @@
-release: yarn prisma migrate deploy
+release: yarn prisma migrate deploy && yarn prisma generate
 web: yarn start
