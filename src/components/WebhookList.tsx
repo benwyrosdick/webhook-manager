@@ -34,7 +34,7 @@ export default function WebhookList() {
   }, []);
 
   const handleCreateWebhook = async () => {
-    if (!newWebhook.path || !newWebhook.targetUrl) return;
+    if (!newWebhook.path) return;
     
     try {
       await api.createWebhook(newWebhook.path, newWebhook.targetUrl);
@@ -139,9 +139,9 @@ export default function WebhookList() {
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Target URL</label>
+                <label className="text-sm font-medium text-gray-700">Target URL (Optional)</label>
                 <Input
-                  placeholder="https://example.com/webhook"
+                  placeholder="https://example.com/webhook (leave empty to collect only)"
                   value={newWebhook.targetUrl}
                   onChange={(e) => setNewWebhook({ ...newWebhook, targetUrl: e.target.value })}
                   className="bg-white/80"
@@ -245,16 +245,13 @@ export default function WebhookList() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <button
-                        onClick={() => {
-                          console.log('Navigating to webhook:', webhook.id);
-                          window.location.href = `/webhooks/${webhook.id}`;
-                        }}
-                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      <Link 
+                        to={`/webhooks/${webhook.id}`}
+                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
                       >
                         <Eye className="h-3 w-3" />
                         {(webhook as any).requestCount || 0} requests
-                      </button>
+                      </Link>
                     </TableCell>
                     <TableCell className="text-sm text-gray-500">
                       {formatTimestamp(webhook.createdAt)}

@@ -217,15 +217,15 @@ app.get('/api/webhooks', async (req, res) => {
 app.post('/api/webhooks', async (req, res) => {
   const { path, targetUrl } = req.body;
   
-  if (!path || !targetUrl) {
-    return res.status(400).json({ error: 'path and targetUrl are required' });
+  if (!path) {
+    return res.status(400).json({ error: 'path is required' });
   }
   
   try {
     const webhook = await prisma.webhook.create({
       data: {
         path: path,
-        targetUrl: targetUrl
+        targetUrl: targetUrl || null
       }
     });
     

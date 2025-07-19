@@ -23,7 +23,7 @@ model WebhookRequest {
   userAgent     String?  @map("user_agent")
   relayStatus   String?  @map("relay_status")
   relayResponse String?  @map("relay_response")
-  webhook       Webhook  @relation(fields: [webhookId], references: [id])
+  webhook       Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
   webhookId     Int      @map("webhook_id")
 
   @@map("webhook_requests")
