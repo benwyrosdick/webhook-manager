@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { Plus, Save, X, ExternalLink, Eye, Trash2, Edit } from 'lucide-react';
+import { Plus, Save, X, Copy, Eye, Trash2, Edit } from 'lucide-react';
 
 // Webhook Icon Component
 const WebhookIcon = ({ className }: { className?: string }) => (
@@ -104,6 +104,15 @@ export default function WebhookList() {
 
   const getWebhookUrl = (path: string) => {
     return `${import.meta.env.VITE_API_BASE}/webhook/${path}`;
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      // You could add a toast notification here if you have a toast system
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
   };
 
   if (loading) {
@@ -296,7 +305,13 @@ export default function WebhookList() {
                               <span className="font-mono bg-blue-100 text-blue-800 px-2 py-1 rounded">
                                 {getWebhookUrl(webhook.path)}
                               </span>
-                              <ExternalLink className="h-3 w-3" />
+                              <button
+                                onClick={() => copyToClipboard(getWebhookUrl(webhook.path))}
+                                className="hover:text-blue-600 transition-colors"
+                                title="Copy webhook URL"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </button>
                             </div>
                           </div>
                           <div className="flex gap-1 ml-4">
@@ -319,8 +334,8 @@ export default function WebhookList() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 text-sm">
+                          <div className="col-span-3">
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Target URL</label>
                             <div className="mt-1 font-mono text-sm">
                               {webhook.targetUrl ? (
