@@ -137,7 +137,7 @@ export default function WebhookList() {
         <Button 
           onClick={() => setShowAddForm(true)} 
           disabled={showAddForm}
-          className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg"
+          variant="create"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Webhook
@@ -192,7 +192,7 @@ export default function WebhookList() {
               <div className="flex gap-2">
                 <Button 
                   onClick={handleCreateWebhook}
-                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
+                  variant="success"
                 >
                   <Save className="h-4 w-4 mr-2" />
                   Create
@@ -200,7 +200,6 @@ export default function WebhookList() {
                 <Button 
                   variant="outline" 
                   onClick={() => setShowAddForm(false)}
-                  className="bg-white/80 backdrop-blur-sm border-gray-200 hover:bg-gray-50 text-gray-700"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Cancel
@@ -279,7 +278,7 @@ export default function WebhookList() {
                           <Button
                             onClick={() => handleUpdateWebhook(webhook.id)}
                             size="sm"
-                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                            variant="success"
                           >
                             <Save className="h-4 w-4 mr-2" />
                             Save Changes
@@ -288,7 +287,6 @@ export default function WebhookList() {
                             onClick={cancelEditing}
                             variant="outline"
                             size="sm"
-                            className="bg-white/80"
                           >
                             <X className="h-4 w-4 mr-2" />
                             Cancel
