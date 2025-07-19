@@ -1,24 +1,26 @@
 # Webhook Manager
 
-A modern unified web application for receiving, viewing, and forwarding webhooks. Built with React, TypeScript, Tailwind CSS, Express.js, and Prisma. Features a sleek gradient interface with syntax highlighting, comprehensive webhook management, and runs as a single Node.js process.
+A modern unified web application for receiving, viewing, and forwarding webhooks. Built with React, TypeScript, Tailwind CSS, Express.js, and Prisma. Features a sleek gradient interface with syntax highlighting, comprehensive webhook management, preview field extraction, and runs as a single Node.js process.
 
 ## Features
 
 ### Core Functionality
 - **Webhook Reception**: Receive webhooks at `http://localhost:3001/webhook/your-path`
 - **Request Viewing**: View all incoming webhook requests with detailed information
-- **URL Mapping**: Create mappings to forward webhooks to target URLs
+- **Webhook Management**: Create and manage webhooks with optional target URLs (collect-only mode)
+- **Preview Field Extraction**: Extract and display specific data fields from headers, body, or query parameters
 - **Real-time Updates**: Auto-refresh webhook requests every 5 seconds without flashing
 - **Request Management**: Delete individual requests or clear all requests
 - **Unified Architecture**: Single Node.js process serves both API and frontend
 
 ### Advanced Features
 - **Syntax Highlighting**: JSON syntax highlighting for headers, query parameters, and request bodies
-- **Full-screen Modal**: View request bodies in a full-screen modal with syntax highlighting
-- **Resend Functionality**: Resend any webhook request to its mapped endpoint
-- **Copy cURL Command**: Generate and copy cURL commands for mapped requests to clipboard
+- **Request Details Modal**: View complete request details in a comprehensive modal interface
+- **Preview Fields**: Configure custom field extraction (e.g., `headers.x-event-type`, `body.event`, `queryParams.source`)
+- **Resend Functionality**: Resend any webhook request to its target endpoint (when configured)
+- **Collect-Only Mode**: Create webhooks without target URLs for pure data collection
 - **Reliable Webhook Handling**: Always returns 200 status to webhook providers, even on forwarding errors
-- **ngrok Integration**: Built-in ngrok tunnel for exposing local webhooks publicly
+- **Comprehensive Testing**: Full test suite with 160+ tests covering components, API, and integration
 
 ### User Interface
 - **Modern Design**: Gradient backgrounds with glass morphism effects
@@ -138,31 +140,41 @@ curl -X POST https://abc123.ngrok.io/webhook/test \
   -d '{"message": "Hello webhook!"}'
 ```
 
-### Managing Webhook Requests
+### Managing Webhooks and Requests
 
-1. **View Requests**: All incoming webhooks appear in the "Webhook Requests" tab
-2. **Request Details**: Click the eye icon to view full request details including:
+#### Creating Webhooks
+1. **Create Webhook**: Add a new webhook path and optionally configure a target URL
+2. **Preview Fields**: Set up field extraction like `headers.x-event-type` to show key data in the requests table
+3. **Collect-Only Mode**: Leave target URL empty to only collect and view webhook data
+4. **Target URL**: Set a destination URL to automatically forward requests
+
+#### Viewing Requests
+1. **Request List**: All incoming webhooks appear with method, timestamp, IP, and status
+2. **Preview Column**: When configured, shows extracted field values for quick identification
+3. **Request Details**: Click the eye icon to view complete request details including:
    - HTTP method, URL, IP address, and timestamp
    - Syntax-highlighted headers and query parameters
-   - Syntax-highlighted request body
-3. **Full-screen View**: Click "Full Screen" to view request bodies in a modal
-4. **Resend Requests**: Click the send icon to resend any request to its mapped endpoint
-5. **Copy cURL**: Click "Copy cURL" to generate and copy a cURL command for the mapped endpoint
-6. **Delete Requests**: Remove individual requests or clear all requests
+   - Syntax-highlighted request body and relay response
+4. **Resend Requests**: Click the send icon to resend any request to its target endpoint (if configured)
+5. **Delete Requests**: Remove individual requests as needed
 
-### URL Mappings
+### Preview Field Examples
 
-1. Go to the "URL Mappings" tab
-2. Click "Add Mapping"
-3. Enter a webhook path (e.g., `github`)
-4. Enter a target URL (e.g., `https://your-app.com/webhook`)
-5. The webhook will automatically forward requests from `http://localhost:3001/webhook/github` to your target URL
+Configure preview fields to extract key information from your webhooks:
 
-**Features:**
-- **Real-time editing**: Click edit icon to modify mappings inline
-- **Status toggle**: Enable/disable mappings without deleting
-- **Reliable forwarding**: Always returns 200 to webhook providers
-- **Error handling**: Forwarding failures are logged but don't break webhook reception
+**Header Fields:**
+- `headers.x-event-type` - Extract event type from custom headers
+- `headers.x-github-event` - GitHub webhook event types
+- `headers.x-shopify-test` - Shopify test mode indicator
+
+**Body Fields:**
+- `body.event` - Direct event field from JSON body
+- `body.data.type` - Nested field extraction
+- `body.user.email` - Extract user information
+
+**Query Parameters:**
+- `queryParams.source` - Request source identification
+- `queryParams.version` - API version tracking
 
 ## Testing
 
@@ -183,16 +195,17 @@ yarn test:coverage
 ```
 
 **Test Coverage:**
-- **API Service Tests**: HTTP client functionality and error handling
-- **Utility Function Tests**: Helper functions and class name utilities
-- **Component Tests**: React component rendering and user interactions
-- **Integration Tests**: App-level functionality and routing
+- **Component Tests**: React component rendering, user interactions, and webhook management
+- **API Service Tests**: HTTP client functionality, webhook operations, and error handling
+- **UI Component Tests**: Button, input, card, badge, and table components
+- **Integration Tests**: End-to-end webhook creation and preview field functionality
+- **Preview Field Tests**: Field extraction from headers, body, and query parameters
 
 **Testing Features:**
-- **Mocked Dependencies**: Isolated unit tests with mocked fetch and external libraries
-- **User Interaction Testing**: Keyboard shortcuts, button clicks, and form submissions
-- **Error Boundary Testing**: Graceful error handling and user feedback
-- **Accessibility Testing**: ARIA attributes and keyboard navigation
+- **Mocked Dependencies**: Isolated unit tests with mocked APIs and external libraries
+- **User Interaction Testing**: Form submissions, modal interactions, and button clicks
+- **Error Handling**: Graceful error handling and user feedback scenarios
+- **TypeScript Testing**: Full type safety with proper mocking patterns
 
 ## Database Management
 
@@ -229,24 +242,28 @@ DATABASE_URL="postgresql://username:password@host:port/database"
 webhook-manager/
 ├── src/                    # Frontend React application
 │   ├── components/         # React components
-│   │   ├── ui/            # shadcn-ui components (button, card, table, etc.)
-│   │   ├── WebhookRequests.tsx   # Main webhook requests interface
-│   │   ├── URLMappings.tsx       # URL mapping management
-│   │   └── SyntaxHighlighter.tsx # Code syntax highlighting
+│   │   ├── ui/            # shadcn-ui components (button, card, table, modal, etc.)
+│   │   ├── __tests__/     # Component tests with comprehensive coverage
+│   │   ├── WebhookList.tsx        # Webhook management interface
+│   │   ├── WebhookDetail.tsx      # Individual webhook details and requests
+│   │   └── SyntaxHighlighter.tsx  # Code syntax highlighting
 │   ├── services/          # API service layer
+│   │   ├── __tests__/     # API service tests
 │   │   └── api.ts         # HTTP client for backend API
 │   ├── types/             # TypeScript type definitions
-│   │   └── webhook.ts     # Webhook and mapping types
-│   └── App.tsx            # Main application component
+│   │   └── webhook.ts     # Webhook and request types
+│   ├── assets/            # Static assets
+│   │   └── icons8-webhook.svg     # Webhook icon (used as favicon)
+│   └── App.tsx            # Main application component with routing
 ├── server.js              # Main Express server (unified frontend + API)
 ├── prisma-client.js       # Prisma database client
 ├── prisma/                # Database configuration
-│   ├── schema.prisma      # Database schema
+│   ├── schema.prisma      # Database schema with webhooks and requests
 │   └── migrations/        # Database migration files
 ├── public/                # Built frontend files (served by Express)
 │   ├── index.html         # Main HTML file
-│   ├── assets/            # CSS and JS bundles
-│   └── *.svg              # Favicon and icons
+│   ├── webhook.svg        # Favicon (webhook icon)
+│   └── assets/            # CSS and JS bundles
 ├── generated/             # Prisma generated client
 └── package.json           # Unified dependencies
 ```
@@ -254,23 +271,22 @@ webhook-manager/
 ## API Endpoints
 
 ### Webhook Endpoints
-- `POST/GET/PUT/DELETE /webhook/*` - Receive webhooks and forward if mapping exists
+- `POST/GET/PUT/DELETE /webhook/*` - Receive webhooks and forward if target URL configured
   - Always returns 200 status for reliable webhook handling
   - Stores all requests in database for inspection
-  - Forwards to mapped URLs when available
+  - Forwards to target URLs when configured
+
+### Webhook Management
+- `GET /api/webhooks` - Get all configured webhooks
+- `POST /api/webhooks` - Create new webhook (path required, targetUrl and previewField optional)
+- `PUT /api/webhooks/:id` - Update webhook configuration
+- `DELETE /api/webhooks/:id` - Delete webhook and cascade delete associated requests
 
 ### Request Management
-- `GET /api/requests` - Get all webhook requests (supports limit/offset)
+- `GET /api/requests` - Get all webhook requests with optional webhook filtering
 - `GET /api/requests/:id` - Get specific request details
-- `POST /api/requests/:id/resend` - Resend request to mapped endpoint
+- `POST /api/requests/:id/resend` - Resend request to target endpoint (if configured)
 - `DELETE /api/requests/:id` - Delete specific request
-- `DELETE /api/requests` - Clear all requests
-
-### URL Mappings
-- `GET /api/mappings` - Get all URL mappings
-- `POST /api/mappings` - Create new mapping
-- `PUT /api/mappings/:id` - Update mapping (path, URL, active status)
-- `DELETE /api/mappings/:id` - Delete mapping
 
 ## Technologies Used
 

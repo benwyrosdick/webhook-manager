@@ -201,8 +201,8 @@ export default function WebhookList() {
       <Card className="bg-white/80 backdrop-blur-sm shadow-lg border-0 ring-1 ring-blue-100">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-800">
-            <div className="p-1 bg-blue-100 rounded-md">
-              <WebhookIcon className="h-4 w-4 text-blue-600" />
+            <div className="p-1 bg-gray-100 rounded-md">
+              <WebhookIcon className="h-4 w-4 text-gray-600" />
             </div>
             Webhooks ({webhooks.length})
           </CardTitle>

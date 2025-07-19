@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Modal } from './ui/modal';
-import { ArrowLeft, ExternalLink, Eye, RotateCcw, Trash2, Activity, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Settings, Eye, RotateCcw, Trash2, RadioTower, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { CodeHighlighter } from './SyntaxHighlighter';
 
 export default function WebhookDetail() {
@@ -185,8 +185,8 @@ export default function WebhookDetail() {
       <Card className="bg-white/80 backdrop-blur-sm shadow-lg border-0 ring-1 ring-blue-100">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-800">
-            <div className="p-1 bg-blue-100 rounded-md">
-              <ExternalLink className="h-4 w-4 text-blue-600" />
+            <div className="p-1 bg-gray-100 rounded-md">
+              <Settings className="h-4 w-4 text-gray-600" />
             </div>
             Webhook Configuration
           </CardTitle>
@@ -233,8 +233,8 @@ export default function WebhookDetail() {
       <Card className="bg-white/80 backdrop-blur-sm shadow-lg border-0 ring-1 ring-blue-100">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-800">
-            <div className="p-1 bg-green-100 rounded-md">
-              <Activity className="h-4 w-4 text-green-600" />
+            <div className="p-1 bg-blue-100 rounded-md">
+              <RadioTower className="h-4 w-4 text-blue-600" />
             </div>
             Recent Requests ({requests.length})
           </CardTitle>
@@ -275,8 +275,8 @@ export default function WebhookDetail() {
                     )}
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {getRelayStatusIcon(request.relayStatus)}
-                        {getRelayStatusBadge(request.relayStatus)}
+                        {getRelayStatusIcon(request.relayStatus || null)}
+                        {getRelayStatusBadge(request.relayStatus || null)}
                       </div>
                     </TableCell>
                     <TableCell className="text-sm font-mono">

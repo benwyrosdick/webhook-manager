@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import WebhookList from './components/WebhookList';
 import WebhookDetail from './components/WebhookDetail';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
-import { Webhook, Activity } from 'lucide-react';
+import { Activity } from 'lucide-react';
 
 function App() {
   return (
