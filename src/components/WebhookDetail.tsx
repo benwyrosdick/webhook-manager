@@ -20,7 +20,7 @@ export default function WebhookDetail() {
   const [selectedRequest, setSelectedRequest] = useState<WebhookRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [requestsLoading, setRequestsLoading] = useState(false);
-  const { toasts, removeToast, success, error } = useToast();
+  const { toasts, removeToast, success: successToast, error: errorToast } = useToast();
 
   const fetchWebhook = async () => {
     if (!webhookId) return;
@@ -74,12 +74,12 @@ export default function WebhookDetail() {
   const handleResendRequest = async (requestId: number) => {
     try {
       await api.resendRequest(requestId);
-      success('Request resent successfully', 'The webhook request has been resent to the target URL');
+      successToast('Request resent successfully', 'The webhook request has been resent to the target URL');
       // Refresh the requests to see updated relay status
       await fetchRequests();
     } catch (error) {
       console.error('Failed to resend request:', error);
-      error('Resend failed', 'Failed to resend the webhook request to the target URL');
+      errorToast('Resend failed', 'Failed to resend the webhook request to the target URL');
     }
   };
 
