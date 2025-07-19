@@ -1,25 +1,26 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import App from '../App'
 
 // Mock child components
-vi.mock('../components/WebhookRequests', () => ({
-  default: () => <div data-testid="webhook-requests">Webhook Requests Component</div>
+vi.mock('../components/WebhookList', () => ({
+  default: () => <div data-testid="webhook-list">Webhook List Component</div>
 }))
 
-vi.mock('../components/URLMappings', () => ({
-  default: () => <div data-testid="url-mappings">URL Mappings Component</div>
+vi.mock('../components/WebhookDetail', () => ({
+  default: () => <div data-testid="webhook-detail">Webhook Detail Component</div>
+}))
+
+// Mock React Router
+vi.mock('react-router-dom', () => ({
+  BrowserRouter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Routes: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Route: ({ element }: { element: React.ReactNode }) => <div>{element}</div>,
+  Link: ({ children, to }: { children: React.ReactNode, to: string }) => <a href={to}>{children}</a>,
+  useParams: () => ({ id: '1' }),
 }))
 
 describe('App', () => {
-  it('should render app title and description', () => {
-    render(<App />)
-    
-    expect(screen.getByText('Webhook Manager')).toBeInTheDocument()
-    expect(screen.getByText('Capture, view, and forward webhooks with ease')).toBeInTheDocument()
-  })
-
   it('should render Quick Start section', () => {
     render(<App />)
     
@@ -28,56 +29,10 @@ describe('App', () => {
     expect(screen.getByText(/Forward webhooks:/)).toBeInTheDocument()
   })
 
-  it('should render navigation tabs', () => {
+  it('should show webhook list component', () => {
     render(<App />)
     
-    expect(screen.getByText('Webhook Requests')).toBeInTheDocument()
-    expect(screen.getByText('Webhooks')).toBeInTheDocument()
-  })
-
-  it('should show webhook requests by default', () => {
-    render(<App />)
-    
-    expect(screen.getByTestId('webhook-requests')).toBeInTheDocument()
-    expect(screen.queryByTestId('url-mappings')).not.toBeInTheDocument()
-  })
-
-  it('should switch to webhooks when tab is clicked', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-    
-    const urlMappingsTab = screen.getByText('Webhooks')
-    await user.click(urlMappingsTab)
-    
-    expect(screen.getByTestId('url-mappings')).toBeInTheDocument()
-    expect(screen.queryByTestId('webhook-requests')).not.toBeInTheDocument()
-  })
-
-  it('should switch back to webhook requests when tab is clicked', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-    
-    // Switch to webhooks first
-    const urlMappingsTab = screen.getByText('Webhooks')
-    await user.click(urlMappingsTab)
-    
-    // Then switch back to webhook requests
-    const webhookRequestsTab = screen.getByText('Webhook Requests')
-    await user.click(webhookRequestsTab)
-    
-    expect(screen.getByTestId('webhook-requests')).toBeInTheDocument()
-    expect(screen.queryByTestId('url-mappings')).not.toBeInTheDocument()
-  })
-
-  it('should highlight active tab', () => {
-    render(<App />)
-    
-    const webhookRequestsTab = screen.getByText('Webhook Requests').closest('button')
-    const urlMappingsTab = screen.getByText('Webhooks').closest('button')
-    
-    // Webhook requests should be active by default
-    expect(webhookRequestsTab).toHaveClass('bg-gradient-to-r', 'from-blue-500')
-    expect(urlMappingsTab).toHaveClass('bg-white/80', 'border-blue-200')
+    expect(screen.getByTestId('webhook-list')).toBeInTheDocument()
   })
 
   it('should display correct webhook URL in Quick Start', () => {

@@ -4,8 +4,15 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
 
 export const api = {
   // Webhook requests
-  getRequests: async (limit = 100, offset = 0): Promise<WebhookRequest[]> => {
-    const response = await fetch(`${API_BASE}/api/requests?limit=${limit}&offset=${offset}`);
+  getRequests: async (limit = 100, offset = 0, webhookId?: number): Promise<WebhookRequest[]> => {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString()
+    });
+    if (webhookId) {
+      params.append('webhookId', webhookId.toString());
+    }
+    const response = await fetch(`${API_BASE}/api/requests?${params}`);
     if (!response.ok) throw new Error('Failed to fetch requests');
     return response.json();
   },

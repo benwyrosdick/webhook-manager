@@ -21,6 +21,7 @@ export interface Webhook {
   createdAt: string;
   updatedAt: string;
   requests?: WebhookRequest[];
+  requestCount?: number;
 }
 
 // Legacy interface for backward compatibility

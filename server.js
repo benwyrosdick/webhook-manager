@@ -298,13 +298,17 @@ app.delete('/api/webhooks/:id', async (req, res) => {
   }
 });
 
-// Get all webhook requests
+// Get all webhook requests (optionally filtered by webhook ID)
 app.get('/api/requests', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 100;
     const offset = parseInt(req.query.offset) || 0;
+    const webhookId = req.query.webhookId ? parseInt(req.query.webhookId) : undefined;
+    
+    const whereClause = webhookId ? { webhookId: webhookId } : {};
     
     const requests = await prisma.webhookRequest.findMany({
+      where: whereClause,
       orderBy: {
         timestamp: 'desc'
       },
