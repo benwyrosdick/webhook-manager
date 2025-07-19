@@ -30,13 +30,14 @@ model WebhookRequest {
 }
 
 model Webhook {
-  id          Int      @id @default(autoincrement())
-  path        String   @unique
-  targetUrl   String   @map("target_url")
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  requests    WebhookRequest[]
+  id           Int      @id @default(autoincrement())
+  path         String   @unique
+  targetUrl    String?  @map("target_url")
+  previewField String?  @map("preview_field")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  requests     WebhookRequest[]
 
   @@map("webhooks")
 }

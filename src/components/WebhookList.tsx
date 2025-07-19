@@ -12,7 +12,7 @@ import { Plus, Save, X, ExternalLink, Settings, Eye, Trash2, Edit } from 'lucide
 export default function WebhookList() {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [newWebhook, setNewWebhook] = useState({ path: '', targetUrl: '' });
+  const [newWebhook, setNewWebhook] = useState({ path: '', targetUrl: '', previewField: '' });
   const [showAddForm, setShowAddForm] = useState(false);
   const [editData, setEditData] = useState<Partial<Webhook>>({});
   const [loading, setLoading] = useState(true);
@@ -37,8 +37,8 @@ export default function WebhookList() {
     if (!newWebhook.path) return;
     
     try {
-      await api.createWebhook(newWebhook.path, newWebhook.targetUrl);
-      setNewWebhook({ path: '', targetUrl: '' });
+      await api.createWebhook(newWebhook.path, newWebhook.targetUrl, newWebhook.previewField);
+      setNewWebhook({ path: '', targetUrl: '', previewField: '' });
       setShowAddForm(false);
       fetchWebhooks();
     } catch (error) {
@@ -73,6 +73,7 @@ export default function WebhookList() {
     setEditData({
       path: webhook.path,
       targetUrl: webhook.targetUrl,
+      previewField: webhook.previewField,
       active: webhook.active,
     });
   };
@@ -147,6 +148,18 @@ export default function WebhookList() {
                   className="bg-white/80"
                 />
               </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Preview Field (Optional)</label>
+                <Input
+                  placeholder="headers.x-shopify-test or body.event_type"
+                  value={newWebhook.previewField}
+                  onChange={(e) => setNewWebhook({ ...newWebhook, previewField: e.target.value })}
+                  className="bg-white/80"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Field path to show in requests table. Examples: <code>headers.content-type</code>, <code>body.event</code>
+                </p>
+              </div>
               <div className="flex gap-2">
                 <Button 
                   onClick={handleCreateWebhook}
@@ -189,6 +202,7 @@ export default function WebhookList() {
                 <TableRow>
                   <TableHead>Webhook Path</TableHead>
                   <TableHead>Target URL</TableHead>
+                  <TableHead>Preview Field</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Requests</TableHead>
                   <TableHead>Created</TableHead>
@@ -225,6 +239,20 @@ export default function WebhookList() {
                       ) : (
                         <div className="font-mono text-sm break-all">
                           {webhook.targetUrl || <span className="text-gray-400 italic">Not configured</span>}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingId === webhook.id ? (
+                        <Input
+                          value={editData.previewField || ''}
+                          onChange={(e) => setEditData({ ...editData, previewField: e.target.value })}
+                          className="w-full bg-white/80"
+                          placeholder="headers.x-field or body.event"
+                        />
+                      ) : (
+                        <div className="font-mono text-sm break-all">
+                          {webhook.previewField || <span className="text-gray-400 italic">Not configured</span>}
                         </div>
                       )}
                     </TableCell>

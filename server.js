@@ -201,6 +201,7 @@ app.get('/api/webhooks', async (req, res) => {
       id: webhook.id,
       path: webhook.path,
       targetUrl: webhook.targetUrl,
+      previewField: webhook.previewField,
       active: webhook.active,
       createdAt: webhook.createdAt,
       updatedAt: webhook.updatedAt,
@@ -215,7 +216,7 @@ app.get('/api/webhooks', async (req, res) => {
 
 // Create webhook (new API)
 app.post('/api/webhooks', async (req, res) => {
-  const { path, targetUrl } = req.body;
+  const { path, targetUrl, previewField } = req.body;
   
   if (!path) {
     return res.status(400).json({ error: 'path is required' });
@@ -225,7 +226,8 @@ app.post('/api/webhooks', async (req, res) => {
     const webhook = await prisma.webhook.create({
       data: {
         path: path,
-        targetUrl: targetUrl || null
+        targetUrl: targetUrl || null,
+        previewField: previewField || null
       }
     });
     
@@ -233,6 +235,7 @@ app.post('/api/webhooks', async (req, res) => {
       id: webhook.id, 
       path: webhook.path, 
       targetUrl: webhook.targetUrl,
+      previewField: webhook.previewField,
       active: webhook.active,
       createdAt: webhook.createdAt,
       updatedAt: webhook.updatedAt
@@ -247,7 +250,7 @@ app.post('/api/webhooks', async (req, res) => {
 
 // Update webhook (new API)
 app.put('/api/webhooks/:id', async (req, res) => {
-  const { path, targetUrl, active } = req.body;
+  const { path, targetUrl, active, previewField } = req.body;
   
   try {
     const webhook = await prisma.webhook.update({
@@ -257,7 +260,8 @@ app.put('/api/webhooks/:id', async (req, res) => {
       data: {
         path: path,
         targetUrl: targetUrl,
-        active: active
+        active: active,
+        previewField: previewField
       }
     });
     
@@ -265,6 +269,7 @@ app.put('/api/webhooks/:id', async (req, res) => {
       id: webhook.id,
       path: webhook.path,
       targetUrl: webhook.targetUrl,
+      previewField: webhook.previewField,
       active: webhook.active,
       createdAt: webhook.createdAt,
       updatedAt: webhook.updatedAt

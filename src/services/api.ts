@@ -52,13 +52,13 @@ export const api = {
     return response.json();
   },
 
-  createWebhook: async (path: string, targetUrl: string): Promise<Webhook> => {
+  createWebhook: async (path: string, targetUrl: string, previewField?: string): Promise<Webhook> => {
     const response = await fetch(`${API_BASE}/api/webhooks`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ path, targetUrl }),
+      body: JSON.stringify({ path, targetUrl, previewField }),
     });
     if (!response.ok) throw new Error('Failed to create webhook');
     return response.json();

@@ -108,6 +108,37 @@ export default function WebhookDetail() {
     return <Badge variant="secondary">{status}</Badge>;
   };
 
+  const getPreviewValue = (request: WebhookRequest, previewField: string | undefined) => {
+    if (!previewField) return null;
+    
+    try {
+      const [source, ...fieldPath] = previewField.split('.');
+      const fieldName = fieldPath.join('.');
+      
+      if (source === 'headers') {
+        const headers = typeof request.headers === 'string' 
+          ? JSON.parse(request.headers) 
+          : request.headers;
+        return headers[fieldName] || null;
+      } else if (source === 'body') {
+        if (!request.body) return null;
+        const body = typeof request.body === 'string' 
+          ? JSON.parse(request.body) 
+          : request.body;
+        return fieldPath.reduce((obj, key) => obj?.[key], body) || null;
+      } else if (source === 'queryParams') {
+        const queryParams = typeof request.queryParams === 'string' 
+          ? JSON.parse(request.queryParams) 
+          : request.queryParams;
+        return queryParams[fieldName] || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error extracting preview value:', error);
+      return null;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -177,6 +208,12 @@ export default function WebhookDetail() {
               </div>
             </div>
             <div>
+              <label className="text-sm font-medium text-gray-700">Preview Field</label>
+              <div className="mt-1 font-mono text-sm">
+                {webhook.previewField || <span className="text-gray-400 italic">Not configured</span>}
+              </div>
+            </div>
+            <div>
               <label className="text-sm font-medium text-gray-700">Created</label>
               <div className="mt-1 text-sm text-gray-600">
                 {formatTimestamp(webhook.createdAt)}
@@ -215,6 +252,7 @@ export default function WebhookDetail() {
                 <TableRow>
                   <TableHead>Timestamp</TableHead>
                   <TableHead>Method</TableHead>
+                  {webhook.previewField && <TableHead>Preview</TableHead>}
                   <TableHead>Relay Status</TableHead>
                   <TableHead>IP Address</TableHead>
                   <TableHead>Actions</TableHead>
@@ -229,6 +267,12 @@ export default function WebhookDetail() {
                     <TableCell>
                       <Badge variant="outline">{request.method}</Badge>
                     </TableCell>
+                    {webhook.previewField && (
+                      <TableCell className="text-sm font-mono max-w-xs truncate">
+                        {getPreviewValue(request, webhook.previewField) || 
+                          <span className="text-gray-400 italic">-</span>}
+                      </TableCell>
+                    )}
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getRelayStatusIcon(request.relayStatus)}
