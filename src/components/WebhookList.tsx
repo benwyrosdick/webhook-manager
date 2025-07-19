@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import type { Webhook } from '../types/webhook';
 import { api } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
@@ -213,116 +212,94 @@ export default function WebhookList() {
               No webhooks configured. Create one to start receiving webhooks.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Webhook Path</TableHead>
-                  <TableHead>Target URL</TableHead>
-                  <TableHead>Preview Field</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Requests</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {webhooks.map((webhook) => (
-                  <TableRow key={webhook.id} className="hover:bg-gray-50">
-                    <TableCell>
-                      {editingId === webhook.id ? (
-                        <Input
-                          value={editData.path || ''}
-                          onChange={(e) => setEditData({ ...editData, path: e.target.value })}
-                          className="w-full bg-white/80"
-                        />
-                      ) : (
-                        <div className="space-y-1">
-                          <div className="font-mono text-sm font-medium">{webhook.path}</div>
-                          <div className="text-xs text-gray-500 flex items-center gap-1">
-                            {getWebhookUrl(webhook.path)}
-                            <ExternalLink className="h-3 w-3" />
+            <div className="space-y-4">
+              {webhooks.map((webhook) => (
+                <Card key={webhook.id} className="bg-gray-50/80 backdrop-blur-sm border border-gray-200 hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    {editingId === webhook.id ? (
+                      // Edit Mode
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-gray-700 block mb-1">Webhook Path</label>
+                            <Input
+                              value={editData.path || ''}
+                              onChange={(e) => setEditData({ ...editData, path: e.target.value })}
+                              className="bg-white/80"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-700 block mb-1">Target URL</label>
+                            <Input
+                              value={editData.targetUrl || ''}
+                              onChange={(e) => setEditData({ ...editData, targetUrl: e.target.value })}
+                              className="bg-white/80"
+                              placeholder="https://example.com/webhook"
+                            />
                           </div>
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === webhook.id ? (
-                        <Input
-                          value={editData.targetUrl || ''}
-                          onChange={(e) => setEditData({ ...editData, targetUrl: e.target.value })}
-                          className="w-full bg-white/80"
-                        />
-                      ) : (
-                        <div className="font-mono text-sm break-all">
-                          {webhook.targetUrl || <span className="text-gray-400 italic">Not configured</span>}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-gray-700 block mb-1">Preview Field</label>
+                            <Input
+                              value={editData.previewField || ''}
+                              onChange={(e) => setEditData({ ...editData, previewField: e.target.value })}
+                              className="bg-white/80"
+                              placeholder="headers.x-field or body.event"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-700 block mb-1">Status</label>
+                            <div className="flex items-center gap-2 pt-2">
+                              <input
+                                type="checkbox"
+                                checked={editData.active ?? webhook.active}
+                                onChange={(e) => setEditData({ ...editData, active: e.target.checked })}
+                                className="rounded border-gray-300"
+                              />
+                              <span className="text-sm">Active</span>
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === webhook.id ? (
-                        <Input
-                          value={editData.previewField || ''}
-                          onChange={(e) => setEditData({ ...editData, previewField: e.target.value })}
-                          className="w-full bg-white/80"
-                          placeholder="headers.x-field or body.event"
-                        />
-                      ) : (
-                        <div className="font-mono text-sm break-all">
-                          {webhook.previewField || <span className="text-gray-400 italic">Not configured</span>}
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            onClick={() => handleUpdateWebhook(webhook.id)}
+                            size="sm"
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                          >
+                            <Save className="h-4 w-4 mr-2" />
+                            Save Changes
+                          </Button>
+                          <Button
+                            onClick={cancelEditing}
+                            variant="outline"
+                            size="sm"
+                            className="bg-white/80"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Cancel
+                          </Button>
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === webhook.id ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={editData.active ?? webhook.active}
-                            onChange={(e) => setEditData({ ...editData, active: e.target.checked })}
-                          />
-                          <span className="text-sm">Active</span>
-                        </div>
-                      ) : (
-                        <Badge variant={webhook.active ? 'default' : 'secondary'}>
-                          {webhook.active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Link 
-                        to={`/webhooks/${webhook.id}`}
-                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        <Eye className="h-3 w-3" />
-                        {(webhook as any).requestCount || 0} requests
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {formatTimestamp(webhook.createdAt)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {editingId === webhook.id ? (
-                          <>
-                            <Button
-                              onClick={() => handleUpdateWebhook(webhook.id)}
-                              variant="ghost"
-                              size="sm"
-                              className="hover:bg-green-50 hover:text-green-600"
-                            >
-                              <Save className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              onClick={cancelEditing}
-                              variant="ghost"
-                              size="sm"
-                              className="hover:bg-gray-50 hover:text-gray-600"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </>
-                        ) : (
-                          <>
+                      </div>
+                    ) : (
+                      // View Mode
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-mono text-lg font-semibold text-gray-900">{webhook.path}</h3>
+                              <Badge variant={webhook.active ? 'default' : 'secondary'}>
+                                {webhook.active ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-gray-500 flex items-center gap-1 mb-2">
+                              <span className="font-mono bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                {getWebhookUrl(webhook.path)}
+                              </span>
+                              <ExternalLink className="h-3 w-3" />
+                            </div>
+                          </div>
+                          <div className="flex gap-1 ml-4">
                             <Button
                               onClick={() => startEditing(webhook)}
                               variant="ghost"
@@ -339,14 +316,55 @@ export default function WebhookList() {
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </>
-                        )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Target URL</label>
+                            <div className="mt-1 font-mono text-sm">
+                              {webhook.targetUrl ? (
+                                <span className="text-blue-600 break-all">{webhook.targetUrl}</span>
+                              ) : (
+                                <span className="text-gray-400 italic">Collect only</span>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Preview Field</label>
+                            <div className="mt-1 font-mono text-sm">
+                              {webhook.previewField ? (
+                                <span className="text-purple-600">{webhook.previewField}</span>
+                              ) : (
+                                <span className="text-gray-400 italic">Not configured</span>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Requests</label>
+                            <div className="mt-1">
+                              <Link 
+                                to={`/webhooks/${webhook.id}`}
+                                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                              >
+                                <Eye className="h-3 w-3" />
+                                {(webhook as any).requestCount || 0} requests
+                              </Link>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Created</label>
+                            <div className="mt-1 text-gray-600">
+                              {formatTimestamp(webhook.createdAt)}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
