@@ -12,26 +12,31 @@ datasource db {
 }
 
 model WebhookRequest {
-  id           Int      @id @default(autoincrement())
-  method       String
-  url          String
-  headers      String?
-  body         String?
-  queryParams  String?  @map("query_params")
-  timestamp    DateTime @default(now())
-  ipAddress    String?  @map("ip_address")
-  userAgent    String?  @map("user_agent")
+  id            Int      @id @default(autoincrement())
+  method        String
+  url           String
+  headers       String?
+  body          String?
+  queryParams   String?  @map("query_params")
+  timestamp     DateTime @default(now())
+  ipAddress     String?  @map("ip_address")
+  userAgent     String?  @map("user_agent")
+  relayStatus   String?  @map("relay_status")
+  relayResponse String?  @map("relay_response")
+  webhook       Webhook  @relation(fields: [webhookId], references: [id])
+  webhookId     Int      @map("webhook_id")
 
   @@map("webhook_requests")
 }
 
-model UrlMapping {
+model Webhook {
   id          Int      @id @default(autoincrement())
-  webhookPath String   @unique @map("webhook_path")
+  path        String   @unique
   targetUrl   String   @map("target_url")
   active      Boolean  @default(true)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+  requests    WebhookRequest[]
 
-  @@map("url_mappings")
+  @@map("webhooks")
 }

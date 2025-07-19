@@ -32,7 +32,7 @@ describe('App', () => {
     render(<App />)
     
     expect(screen.getByText('Webhook Requests')).toBeInTheDocument()
-    expect(screen.getByText('URL Mappings')).toBeInTheDocument()
+    expect(screen.getByText('Webhooks')).toBeInTheDocument()
   })
 
   it('should show webhook requests by default', () => {
@@ -42,11 +42,11 @@ describe('App', () => {
     expect(screen.queryByTestId('url-mappings')).not.toBeInTheDocument()
   })
 
-  it('should switch to URL mappings when tab is clicked', async () => {
+  it('should switch to webhooks when tab is clicked', async () => {
     const user = userEvent.setup()
     render(<App />)
     
-    const urlMappingsTab = screen.getByText('URL Mappings')
+    const urlMappingsTab = screen.getByText('Webhooks')
     await user.click(urlMappingsTab)
     
     expect(screen.getByTestId('url-mappings')).toBeInTheDocument()
@@ -57,8 +57,8 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
     
-    // Switch to URL mappings first
-    const urlMappingsTab = screen.getByText('URL Mappings')
+    // Switch to webhooks first
+    const urlMappingsTab = screen.getByText('Webhooks')
     await user.click(urlMappingsTab)
     
     // Then switch back to webhook requests
@@ -73,7 +73,7 @@ describe('App', () => {
     render(<App />)
     
     const webhookRequestsTab = screen.getByText('Webhook Requests').closest('button')
-    const urlMappingsTab = screen.getByText('URL Mappings').closest('button')
+    const urlMappingsTab = screen.getByText('Webhooks').closest('button')
     
     // Webhook requests should be active by default
     expect(webhookRequestsTab).toHaveClass('bg-gradient-to-r', 'from-blue-500')

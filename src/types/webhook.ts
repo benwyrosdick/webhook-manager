@@ -4,12 +4,26 @@ export interface WebhookRequest {
   url: string;
   headers: Record<string, string>;
   body: string;
-  query_params: Record<string, string>;
+  queryParams: Record<string, string>;
   timestamp: string;
-  ip_address: string;
-  user_agent: string;
+  ipAddress: string;
+  userAgent: string;
+  relayStatus?: string;
+  relayResponse?: string;
+  webhookId: number;
 }
 
+export interface Webhook {
+  id: number;
+  path: string;
+  targetUrl: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  requests?: WebhookRequest[];
+}
+
+// Legacy interface for backward compatibility
 export interface URLMapping {
   id: number;
   webhook_path: string;

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { api } from '../api'
-import type { WebhookRequest, URLMapping } from '../../types/webhook'
+import type { WebhookRequest, Webhook, URLMapping } from '../../types/webhook'
 
 // Mock fetch
 const mockFetch = vi.fn()
@@ -22,9 +22,10 @@ describe('API Service', () => {
           url: '/webhook/test',
           headers: { 'content-type': 'application/json' },
           body: '{"test": true}',
-          query_params: {},
-          ip_address: '127.0.0.1',
-          user_agent: 'test-agent',
+          queryParams: {},
+          ipAddress: '127.0.0.1',
+          userAgent: 'test-agent',
+          webhookId: 1,
           timestamp: '2023-01-01T00:00:00Z'
         }
       ]
@@ -60,9 +61,10 @@ describe('API Service', () => {
         url: '/webhook/test',
         headers: { 'content-type': 'application/json' },
         body: '{"test": true}',
-        query_params: {},
-        ip_address: '127.0.0.1',
-        user_agent: 'test-agent',
+        queryParams: {},
+        ipAddress: '127.0.0.1',
+        userAgent: 'test-agent',
+        webhookId: 1,
         timestamp: '2023-01-01T00:00:00Z'
       }
 
@@ -227,6 +229,105 @@ describe('API Service', () => {
 
       await expect(api.createMapping('test', 'https://example.com/webhook'))
         .rejects.toThrow('Failed to create mapping')
+    })
+  })
+
+  describe('Webhooks (new API)', () => {
+    it('should fetch webhooks', async () => {
+      const mockWebhooks: Webhook[] = [
+        {
+          id: 1,
+          path: 'test',
+          targetUrl: 'https://example.com/webhook',
+          active: true,
+          createdAt: '2023-01-01T00:00:00Z',
+          updatedAt: '2023-01-01T00:00:00Z'
+        }
+      ]
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockWebhooks
+      })
+
+      const result = await api.getWebhooks()
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/api/webhooks`)
+      expect(result).toEqual(mockWebhooks)
+    })
+
+    it('should create a webhook', async () => {
+      const mockWebhook: Webhook = {
+        id: 1,
+        path: 'test',
+        targetUrl: 'https://example.com/webhook',
+        active: true,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      }
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockWebhook
+      })
+
+      const result = await api.createWebhook('test', 'https://example.com/webhook')
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/api/webhooks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          path: 'test',
+          targetUrl: 'https://example.com/webhook'
+        })
+      })
+      expect(result).toEqual(mockWebhook)
+    })
+
+    it('should update a webhook', async () => {
+      const updateData = {
+        path: 'updated-test',
+        targetUrl: 'https://updated.com/webhook',
+        active: false
+      }
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true
+      })
+
+      await api.updateWebhook(1, updateData)
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/api/webhooks/1`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      })
+    })
+
+    it('should delete a webhook', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true
+      })
+
+      await api.deleteWebhook(1)
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/api/webhooks/1`, {
+        method: 'DELETE'
+      })
+    })
+
+    it('should throw error when webhook creation fails', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 409
+      })
+
+      await expect(api.createWebhook('test', 'https://example.com/webhook'))
+        .rejects.toThrow('Failed to create webhook')
     })
   })
 })

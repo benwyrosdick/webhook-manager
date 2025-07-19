@@ -1,4 +1,4 @@
-import type { WebhookRequest, URLMapping } from '../types/webhook';
+import type { WebhookRequest, Webhook, URLMapping } from '../types/webhook';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
 
@@ -38,7 +38,44 @@ export const api = {
     return response.json();
   },
 
-  // URL mappings
+  // Webhooks (new API)
+  getWebhooks: async (): Promise<Webhook[]> => {
+    const response = await fetch(`${API_BASE}/api/webhooks`);
+    if (!response.ok) throw new Error('Failed to fetch webhooks');
+    return response.json();
+  },
+
+  createWebhook: async (path: string, targetUrl: string): Promise<Webhook> => {
+    const response = await fetch(`${API_BASE}/api/webhooks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ path, targetUrl }),
+    });
+    if (!response.ok) throw new Error('Failed to create webhook');
+    return response.json();
+  },
+
+  updateWebhook: async (id: number, data: Partial<Webhook>): Promise<void> => {
+    const response = await fetch(`${API_BASE}/api/webhooks/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Failed to update webhook');
+  },
+
+  deleteWebhook: async (id: number): Promise<void> => {
+    const response = await fetch(`${API_BASE}/api/webhooks/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete webhook');
+  },
+
+  // URL mappings (legacy API for backward compatibility)
   getMappings: async (): Promise<URLMapping[]> => {
     const response = await fetch(`${API_BASE}/api/mappings`);
     if (!response.ok) throw new Error('Failed to fetch mappings');
