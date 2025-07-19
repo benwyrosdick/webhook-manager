@@ -274,9 +274,8 @@ export default function WebhookDetail() {
                       <Badge variant="outline">{request.method}</Badge>
                     </TableCell>
                     {webhook.previewField && (
-                      <TableCell className="text-sm font-mono max-w-xs truncate">
-                        {getPreviewValue(request, webhook.previewField) || 
-                          <span className="text-gray-400 italic">-</span>}
+                      <TableCell className="text-sm font-mono max-w-xs truncate text-purple-600">
+                        {getPreviewValue(request, webhook.previewField)}
                       </TableCell>
                     )}
                     <TableCell>
