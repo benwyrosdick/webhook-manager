@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
+import { useToast, ToastContainer } from './ui/toast';
 import { Plus, Save, X, Copy, Eye, Trash2, Edit } from 'lucide-react';
 
 // Webhook Icon Component
@@ -31,6 +32,7 @@ export default function WebhookList() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editData, setEditData] = useState<Partial<Webhook>>({});
   const [loading, setLoading] = useState(true);
+  const { toasts, removeToast, success, error } = useToast();
 
   const fetchWebhooks = async () => {
     try {
@@ -109,9 +111,10 @@ export default function WebhookList() {
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      // You could add a toast notification here if you have a toast system
+      success('Copied to clipboard', 'Webhook URL has been copied to your clipboard');
     } catch (err) {
       console.error('Failed to copy to clipboard:', err);
+      error('Copy failed', 'Failed to copy webhook URL to clipboard');
     }
   };
 
@@ -124,7 +127,9 @@ export default function WebhookList() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
           Webhook Manager
@@ -334,8 +339,8 @@ export default function WebhookList() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 text-sm">
-                          <div className="col-span-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-14 gap-4 text-sm">
+                          <div className="col-span-7">
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Target URL</label>
                             <div className="mt-1 font-mono text-sm">
                               {webhook.targetUrl ? (
@@ -345,7 +350,7 @@ export default function WebhookList() {
                               )}
                             </div>
                           </div>
-                          <div>
+                          <div className="col-span-3">
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Preview Field</label>
                             <div className="mt-1 font-mono text-sm">
                               {webhook.previewField ? (
@@ -355,7 +360,7 @@ export default function WebhookList() {
                               )}
                             </div>
                           </div>
-                          <div>
+                          <div className="col-span-2">
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Requests</label>
                             <div className="mt-1">
                               <Link 
@@ -367,7 +372,7 @@ export default function WebhookList() {
                               </Link>
                             </div>
                           </div>
-                          <div>
+                          <div className="col-span-2">
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Created</label>
                             <div className="mt-1 text-gray-600">
                               {formatTimestamp(webhook.createdAt)}
@@ -383,6 +388,7 @@ export default function WebhookList() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

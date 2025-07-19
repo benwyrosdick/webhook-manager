@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Modal } from './ui/modal';
+import { useToast, ToastContainer } from './ui/toast';
 import { ArrowLeft, Settings, Eye, RotateCcw, Trash2, RadioTower, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { CodeHighlighter } from './SyntaxHighlighter';
 
@@ -19,6 +20,7 @@ export default function WebhookDetail() {
   const [selectedRequest, setSelectedRequest] = useState<WebhookRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [requestsLoading, setRequestsLoading] = useState(false);
+  const { toasts, removeToast, success, error } = useToast();
 
   const fetchWebhook = async () => {
     if (!webhookId) return;
@@ -72,10 +74,12 @@ export default function WebhookDetail() {
   const handleResendRequest = async (requestId: number) => {
     try {
       await api.resendRequest(requestId);
+      success('Request resent successfully', 'The webhook request has been resent to the target URL');
       // Refresh the requests to see updated relay status
       await fetchRequests();
     } catch (error) {
       console.error('Failed to resend request:', error);
+      error('Resend failed', 'Failed to resend the webhook request to the target URL');
     }
   };
 
@@ -168,7 +172,9 @@ export default function WebhookDetail() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link to="/" className="text-blue-600 hover:text-blue-800">
           <ArrowLeft className="h-5 w-5" />
@@ -399,6 +405,7 @@ export default function WebhookDetail() {
           </div>
         </Modal>
       )}
-    </div>
+      </div>
+    </>
   );
 }
