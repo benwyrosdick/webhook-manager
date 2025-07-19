@@ -37,7 +37,7 @@ function App() {
                 <WebhookList />
               </>
             } />
-            <Route path="/webhook/:id" element={<WebhookDetail />} />
+            <Route path="/webhooks/:id" element={<WebhookDetail />} />
           </Routes>
         </div>
       </div>

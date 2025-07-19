@@ -248,7 +248,7 @@ export default function WebhookList() {
                       <button
                         onClick={() => {
                           console.log('Navigating to webhook:', webhook.id);
-                          window.location.href = `/webhook/${webhook.id}`;
+                          window.location.href = `/webhooks/${webhook.id}`;
                         }}
                         className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                       >
