@@ -4,8 +4,12 @@ import { CodeHighlighter } from '../SyntaxHighlighter'
 
 // Mock react-syntax-highlighter
 vi.mock('react-syntax-highlighter', () => ({
-  Prism: ({ children, ...props }: any) => (
-    <pre data-testid="syntax-highlighter" {...props}>
+  Prism: ({ children, customStyle, ...props }: any) => (
+    <pre 
+      data-testid="syntax-highlighter" 
+      style={customStyle}
+      {...props}
+    >
       {children}
     </pre>
   )

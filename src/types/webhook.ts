@@ -16,8 +16,8 @@ export interface WebhookRequest {
 export interface Webhook {
   id: number;
   path: string;
-  targetUrl: string;
-  previewField?: string;
+  targetUrl?: string | null;
+  previewField?: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;

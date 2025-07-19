@@ -239,7 +239,32 @@ describe('API Service', () => {
           id: 1,
           path: 'test',
           targetUrl: 'https://example.com/webhook',
+          previewField: 'headers.x-event-type',
           active: true,
+          createdAt: '2023-01-01T00:00:00Z',
+          updatedAt: '2023-01-01T00:00:00Z'
+        }
+      ]
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockWebhooks
+      })
+
+      const result = await api.getWebhooks()
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/api/webhooks`)
+      expect(result).toEqual(mockWebhooks)
+    })
+
+    it('should fetch webhooks with optional fields as null', async () => {
+      const mockWebhooks: Webhook[] = [
+        {
+          id: 1,
+          path: 'simple',
+          targetUrl: null,
+          previewField: null,
+          active: false,
           createdAt: '2023-01-01T00:00:00Z',
           updatedAt: '2023-01-01T00:00:00Z'
         }
@@ -280,7 +305,72 @@ describe('API Service', () => {
         },
         body: JSON.stringify({
           path: 'test',
-          targetUrl: 'https://example.com/webhook'
+          targetUrl: 'https://example.com/webhook',
+          previewField: undefined
+        })
+      })
+      expect(result).toEqual(mockWebhook)
+    })
+
+    it('should create a webhook with previewField', async () => {
+      const mockWebhook: Webhook = {
+        id: 1,
+        path: 'test',
+        targetUrl: 'https://example.com/webhook',
+        previewField: 'headers.x-event-type',
+        active: true,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      }
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockWebhook
+      })
+
+      const result = await api.createWebhook('test', 'https://example.com/webhook', 'headers.x-event-type')
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/api/webhooks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          path: 'test',
+          targetUrl: 'https://example.com/webhook',
+          previewField: 'headers.x-event-type'
+        })
+      })
+      expect(result).toEqual(mockWebhook)
+    })
+
+    it('should create a webhook with empty optional fields', async () => {
+      const mockWebhook: Webhook = {
+        id: 1,
+        path: 'simple',
+        targetUrl: null,
+        previewField: null,
+        active: true,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      }
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockWebhook
+      })
+
+      const result = await api.createWebhook('simple', '', '')
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/api/webhooks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          path: 'simple',
+          targetUrl: '',
+          previewField: ''
         })
       })
       expect(result).toEqual(mockWebhook)
@@ -290,6 +380,29 @@ describe('API Service', () => {
       const updateData = {
         path: 'updated-test',
         targetUrl: 'https://updated.com/webhook',
+        active: false
+      }
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true
+      })
+
+      await api.updateWebhook(1, updateData)
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/api/webhooks/1`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      })
+    })
+
+    it('should update a webhook with previewField', async () => {
+      const updateData = {
+        path: 'updated-test',
+        targetUrl: 'https://updated.com/webhook',
+        previewField: 'body.event_type',
         active: false
       }
 
