@@ -1,6 +1,6 @@
 import type { WebhookRequest, Webhook, URLMapping } from '../types/webhook';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 export const api = {
   // Webhook requests
