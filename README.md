@@ -160,21 +160,22 @@ curl -X POST https://abc123.ngrok.io/webhook/test \
 
 ### Preview Field Examples
 
-Configure preview fields to extract key information from your webhooks:
+Configure preview fields to extract key information from your webhooks. You can specify multiple fields by separating them with commas - each field will be displayed on a new line in the requests table.
 
-**Header Fields:**
+**Single Field Examples:**
 - `headers.x-event-type` - Extract event type from custom headers
 - `headers.x-github-event` - GitHub webhook event types
 - `headers.x-shopify-test` - Shopify test mode indicator
-
-**Body Fields:**
 - `body.event` - Direct event field from JSON body
 - `body.data.type` - Nested field extraction
 - `body.user.email` - Extract user information
-
-**Query Parameters:**
 - `queryParams.source` - Request source identification
 - `queryParams.version` - API version tracking
+
+**Multiple Field Examples:**
+- `headers.x-event-type, body.action` - Show both event type and action
+- `body.event, body.user.id, headers.x-source` - Display event, user ID, and source
+- `headers.content-type, body.timestamp, queryParams.version` - Multiple data points
 
 ## Testing
 

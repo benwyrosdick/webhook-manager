@@ -180,13 +180,13 @@ export default function WebhookList() {
               <div>
                 <label className="text-sm font-medium text-gray-700">Preview Field (Optional)</label>
                 <Input
-                  placeholder="headers.x-shopify-test or body.event_type"
+                  placeholder="headers.x-shopify-test, body.event_type"
                   value={newWebhook.previewField}
                   onChange={(e) => setNewWebhook({ ...newWebhook, previewField: e.target.value })}
                   className="bg-white/80"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Field path to show in requests table. Examples: <code>headers.content-type</code>, <code>body.event</code>
+                  Field path(s) to show in requests table. Use commas for multiple fields. Examples: <code>headers.content-type</code>, <code>body.event, headers.x-source</code>
                 </p>
               </div>
               <div className="flex gap-2">
@@ -258,7 +258,7 @@ export default function WebhookList() {
                               value={editData.previewField || ''}
                               onChange={(e) => setEditData({ ...editData, previewField: e.target.value })}
                               className="bg-white/80"
-                              placeholder="headers.x-field or body.event"
+                              placeholder="headers.x-field, body.event"
                             />
                           </div>
                           <div>

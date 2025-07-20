@@ -116,27 +116,40 @@ export default function WebhookDetail() {
     if (!previewField) return null;
     
     try {
-      const [source, ...fieldPath] = previewField.split('.');
-      const fieldName = fieldPath.join('.');
+      // Split by comma to handle multiple fields
+      const fields = previewField.split(',').map(field => field.trim());
+      const values: string[] = [];
       
-      if (source === 'headers') {
-        const headers = typeof request.headers === 'string' 
-          ? JSON.parse(request.headers) 
-          : request.headers;
-        return headers[fieldName] || null;
-      } else if (source === 'body') {
-        if (!request.body) return null;
-        const body = typeof request.body === 'string' 
-          ? JSON.parse(request.body) 
-          : request.body;
-        return fieldPath.reduce((obj, key) => obj?.[key], body) || null;
-      } else if (source === 'queryParams') {
-        const queryParams = typeof request.queryParams === 'string' 
-          ? JSON.parse(request.queryParams) 
-          : request.queryParams;
-        return queryParams[fieldName] || null;
+      for (const field of fields) {
+        const [source, ...fieldPath] = field.split('.');
+        const fieldName = fieldPath.join('.');
+        let value = null;
+        
+        if (source === 'headers') {
+          const headers = typeof request.headers === 'string' 
+            ? JSON.parse(request.headers) 
+            : request.headers;
+          value = headers[fieldName];
+        } else if (source === 'body') {
+          if (request.body) {
+            const body = typeof request.body === 'string' 
+              ? JSON.parse(request.body) 
+              : request.body;
+            value = fieldPath.reduce((obj, key) => obj?.[key], body);
+          }
+        } else if (source === 'queryParams') {
+          const queryParams = typeof request.queryParams === 'string' 
+            ? JSON.parse(request.queryParams) 
+            : request.queryParams;
+          value = queryParams[fieldName];
+        }
+        
+        if (value !== null && value !== undefined) {
+          values.push(String(value));
+        }
       }
-      return null;
+      
+      return values.length > 0 ? values.join('\n') : null;
     } catch (error) {
       console.error('Error extracting preview value:', error);
       return null;
@@ -274,8 +287,11 @@ export default function WebhookDetail() {
                       <Badge variant="outline">{request.method}</Badge>
                     </TableCell>
                     {webhook.previewField && (
-                      <TableCell className="text-sm font-mono max-w-xs truncate text-purple-600">
-                        {getPreviewValue(request, webhook.previewField)}
+                      <TableCell className="text-sm font-mono max-w-xs text-purple-600">
+                        <div className="whitespace-pre-line max-h-20 overflow-y-auto">
+                          {getPreviewValue(request, webhook.previewField) || 
+                            <span className="text-gray-400 italic">-</span>}
+                        </div>
                       </TableCell>
                     )}
                     <TableCell>

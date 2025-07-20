@@ -116,7 +116,7 @@ describe('WebhookList', () => {
       expect(screen.getByText('Create New Webhook')).toBeInTheDocument()
       expect(screen.getByPlaceholderText('e.g., my-webhook')).toBeInTheDocument()
       expect(screen.getByPlaceholderText('https://example.com/webhook (leave empty to collect only)')).toBeInTheDocument()
-      expect(screen.getByPlaceholderText('headers.x-shopify-test or body.event_type')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('headers.x-shopify-test, body.event_type')).toBeInTheDocument()
     })
 
     it('should create webhook with all fields', async () => {
@@ -146,7 +146,7 @@ describe('WebhookList', () => {
       // Fill form
       await user.type(screen.getByPlaceholderText('e.g., my-webhook'), 'new-webhook')
       await user.type(screen.getByPlaceholderText('https://example.com/webhook (leave empty to collect only)'), 'https://test.com/hook')
-      await user.type(screen.getByPlaceholderText('headers.x-shopify-test or body.event_type'), 'body.event')
+      await user.type(screen.getByPlaceholderText('headers.x-shopify-test, body.event_type'), 'body.event')
       
       // Submit
       await user.click(screen.getByText('Create'))

@@ -338,6 +338,48 @@ describe('WebhookDetail', () => {
       
       consoleSpy.mockRestore()
     })
+
+    it('should handle multiple preview fields separated by commas', async () => {
+      const webhookWithMultiplePreview = { ...mockWebhook, previewField: 'headers.x-event-type, body.event' }
+      vi.mocked(api.getWebhooks).mockResolvedValue([webhookWithMultiplePreview])
+      
+      renderWithRouter(<WebhookDetail />)
+      
+      await waitFor(() => {
+        // Should show both values separated by newlines
+        const previewCells = screen.getAllByText(/order\.created/)
+        expect(previewCells.length).toBeGreaterThan(0)
+      })
+    })
+
+    it('should handle multiple preview fields with some missing values', async () => {
+      const webhookWithMultiplePreview = { ...mockWebhook, previewField: 'headers.x-event-type, headers.missing-field, body.event' }
+      vi.mocked(api.getWebhooks).mockResolvedValue([webhookWithMultiplePreview])
+      
+      renderWithRouter(<WebhookDetail />)
+      
+      await waitFor(() => {
+        // Should only show existing values, skip missing ones
+        // The values will be combined with newlines in the multiple preview field functionality
+        const previewCells = screen.getAllByText((content, element) => {
+          return content.includes('order.created') || content.includes('order.cancelled')
+        })
+        expect(previewCells.length).toBeGreaterThan(0)
+      })
+    })
+
+    it('should display multiple preview field values with newlines', async () => {
+      const webhookWithMultiplePreview = { ...mockWebhook, previewField: 'headers.x-event-type, body.event, queryParams.source' }
+      vi.mocked(api.getWebhooks).mockResolvedValue([webhookWithMultiplePreview])
+      
+      renderWithRouter(<WebhookDetail />)
+      
+      await waitFor(() => {
+        // Check that the whitespace-pre-line class is applied for proper newline handling
+        const elements = document.querySelectorAll('.whitespace-pre-line')
+        expect(elements.length).toBeGreaterThan(0)
+      })
+    })
   })
 
   describe('Request Actions', () => {
