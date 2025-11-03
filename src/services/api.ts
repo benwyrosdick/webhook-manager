@@ -2,6 +2,10 @@ import type { WebhookRequest, Webhook, URLMapping } from '../types/webhook';
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
+console.log('API_BASE', API_BASE);
+console.log('VITE_API_BASE', import.meta.env.VITE_API_BASE);
+console.log('env', import.meta.env);
+
 export const api = {
   // Webhook requests
   getRequests: async (limit = 100, offset = 0, webhookId?: number): Promise<WebhookRequest[]> => {
