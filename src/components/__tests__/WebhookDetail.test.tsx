@@ -30,7 +30,7 @@ vi.mock('react-router-dom', async () => {
 })
 
 // Mock environment variable
-vi.stubEnv('VITE_API_BASE', 'http://localhost:3001')
+vi.stubEnv('VITE_API_BASE', 'http://localhost:3000')
 
 const mockWebhook: Webhook = {
   id: 1,

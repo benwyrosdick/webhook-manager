@@ -38,7 +38,7 @@ describe('App', () => {
   it('should display correct webhook URL in Quick Start', () => {
     render(<App />)
     
-    const codeElement = screen.getByText('http://localhost:3001/webhook/your-path')
+    const codeElement = screen.getByText('http://localhost:3000/webhook/your-path')
     expect(codeElement).toBeInTheDocument()
     expect(codeElement).toHaveClass('bg-blue-100', 'text-blue-800')
   })

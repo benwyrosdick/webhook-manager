@@ -29,7 +29,7 @@ vi.mock('react-router-dom', async () => {
 })
 
 // Mock environment variable
-vi.stubEnv('VITE_API_BASE', 'http://localhost:3001')
+vi.stubEnv('VITE_API_BASE', 'http://localhost:3000')
 
 const mockWebhooks: Webhook[] = [
   {
@@ -330,8 +330,8 @@ describe('WebhookList', () => {
       renderWithRouter(<WebhookList />)
       
       await waitFor(() => {
-        expect(screen.getByText('http://localhost:3001/webhook/test-webhook')).toBeInTheDocument()
-        expect(screen.getByText('http://localhost:3001/webhook/inactive-webhook')).toBeInTheDocument()
+        expect(screen.getByText('http://localhost:3000/webhook/test-webhook')).toBeInTheDocument()
+        expect(screen.getByText('http://localhost:3000/webhook/inactive-webhook')).toBeInTheDocument()
       })
     })
 
