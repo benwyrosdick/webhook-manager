@@ -23,12 +23,12 @@ src/__tests__
 *.test.tsx
 *.test.js
 *.test.jsx
-vitest.config.*
-vite.config.ts
-tsconfig*.json
-eslint.config.js
-tailwind.config.js
-postcss.config.js
+# vitest.config.*
+# vite.config.ts
+# tsconfig*.json
+# eslint.config.js
+# tailwind.config.js
+# postcss.config.js
 Procfile
 .yarn
 .pnp.*
