@@ -12,15 +12,13 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Accept build argument for VITE_API_BASE
-ARG VITE_API_BASE
-ENV VITE_API_BASE=$VITE_API_BASE
-
 # Generate Prisma client
 RUN yarn prisma generate
 
-# Build frontend
-RUN yarn build
+# Build frontend with secret
+RUN --mount=type=secret,id=VITE_API_BASE \
+    export VITE_API_BASE=$(cat /run/secrets/VITE_API_BASE) && \
+    yarn build
 
 # Production image
 FROM base AS runner
