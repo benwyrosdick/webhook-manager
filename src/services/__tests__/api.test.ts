@@ -6,7 +6,7 @@ import type { WebhookRequest, Webhook, URLMapping } from '../../types/webhook'
 const mockFetch = vi.fn()
 globalThis.fetch = mockFetch
 
-const API_BASE = 'http://localhost:3001'
+const API_BASE = 'http://localhost:3000'
 
 describe('API Service', () => {
   beforeEach(() => {

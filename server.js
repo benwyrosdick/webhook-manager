@@ -5,7 +5,7 @@ import axios from 'axios';
 import prisma from './prisma-client.js';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());

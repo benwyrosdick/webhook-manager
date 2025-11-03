@@ -5,7 +5,7 @@ A modern unified web application for receiving, viewing, and forwarding webhooks
 ## Features
 
 ### Core Functionality
-- **Webhook Reception**: Receive webhooks at `http://localhost:3001/webhook/your-path`
+- **Webhook Reception**: Receive webhooks at `http://localhost:3000/webhook/your-path`
 - **Request Viewing**: View all incoming webhook requests with detailed information
 - **Webhook Management**: Create and manage webhooks with optional target URLs (collect-only mode)
 - **Preview Field Extraction**: Extract and display specific data fields from headers, body, or query parameters
@@ -83,7 +83,7 @@ yarn dev
 
 # This runs:
 # - Frontend: http://localhost:8080 (with hot reload)
-# - Backend: http://localhost:3001 (with auto-restart)
+# - Backend: http://localhost:3000 (with auto-restart)
 
 # Optional: Start ngrok tunnel for public webhook access
 yarn dev:ngrok
@@ -112,11 +112,11 @@ yarn start
 
 **Development:**
 - **Frontend**: `http://localhost:8080` (with hot reload)
-- **Backend API**: `http://localhost:3001`
-- **Webhooks**: `http://localhost:3001/webhook/your-path`
+- **Backend API**: `http://localhost:3000`
+- **Webhooks**: `http://localhost:3000/webhook/your-path`
 
 **Production:**
-- **Application**: `http://localhost:3001` (serves both frontend and API)
+- **Application**: `http://localhost:3000` (serves both frontend and API)
 - **Public Webhook URL**: Check ngrok output for public URL
 - **Database Admin**: `yarn prisma:studio` (optional - opens Prisma Studio)
 
@@ -124,11 +124,11 @@ yarn start
 
 ### Receiving Webhooks
 
-Send HTTP requests to `http://localhost:3001/webhook/{path}` where `{path}` is any string you choose.
+Send HTTP requests to `http://localhost:3000/webhook/{path}` where `{path}` is any string you choose.
 
 **Local Example:**
 ```bash
-curl -X POST http://localhost:3001/webhook/test \
+curl -X POST http://localhost:3000/webhook/test \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello webhook!"}'
 ```
@@ -324,3 +324,109 @@ webhook-manager/
 - **Keyboard Shortcuts**: ESC to close modals, intuitive navigation
 - **Error Handling**: Graceful error handling with user feedback
 - **Performance**: Optimized rendering with React best practices
+
+## Deployment with Kamal
+
+This application is configured for deployment using [Kamal](https://kamal-deploy.org/), a deployment tool that makes it easy to deploy web applications to servers.
+
+### Prerequisites
+
+1. **Install Kamal**:
+   ```bash
+   gem install kamal
+   # Or using Homebrew (macOS)
+   brew install kamal
+   ```
+
+2. **Docker Hub Account** (or another container registry):
+   - Create an account at [Docker Hub](https://hub.docker.com/)
+   - Generate an access token for authentication
+
+3. **Server Requirements**:
+   - A server with Docker installed
+   - SSH access with sudo privileges
+   - PostgreSQL database (can be on the same server or separate)
+
+### Configuration
+
+1. **Update `config/deploy.yml`**:
+   - Replace `your-dockerhub-username` with your Docker Hub username
+   - Replace `your-server-ip-or-domain` with your server's IP address or domain
+   - Update the `user` field if you're not using `root`
+   - Adjust the `port.host` if you want to use a different port (default is 3000)
+
+2. **Set up environment secrets**:
+   ```bash
+   kamal secret set DATABASE_URL postgresql://user:password@host:5432/webhook_manager
+   kamal secret set KAMAL_REGISTRY_PASSWORD your-dockerhub-access-token
+   ```
+
+3. **Configure database**:
+   - You can use an external PostgreSQL database
+   - Or configure a PostgreSQL accessory service in `config/deploy.yml` (commented out)
+   - Make sure your `DATABASE_URL` secret points to your database
+
+### Deploying
+
+1. **Build and deploy**:
+   ```bash
+   kamal setup    # First time setup - builds image, sets up containers
+   kamal deploy   # Subsequent deployments
+   ```
+
+2. **View logs**:
+   ```bash
+   kamal app logs
+   kamal app logs -f  # Follow logs
+   ```
+
+3. **Access your application**:
+   - The app will be available at `http://your-server-ip-or-domain:3000`
+   - Or configure a reverse proxy (nginx, Traefik, etc.) for a custom domain
+
+### Useful Kamal Commands
+
+```bash
+# Deploy the application
+kamal deploy
+
+# Check application health
+kamal app details
+
+# View logs
+kamal app logs -f
+
+# Execute commands in the container
+kamal app exec -- "yarn prisma studio"
+
+# Rollback to previous version
+kamal rollback
+
+# Stop the application
+kamal app stop
+
+# Start the application
+kamal app start
+
+# Remove everything (containers, images)
+kamal remove
+```
+
+### Database Migrations
+
+Migrations run automatically during deployment via the `CMD` in the Dockerfile. If you need to run migrations manually:
+
+```bash
+kamal app exec -- "yarn prisma migrate deploy"
+kamal app exec -- "yarn prisma generate"
+```
+
+### Troubleshooting
+
+- **Build failures**: Check Docker Hub credentials and network connectivity
+- **Database connection errors**: Verify `DATABASE_URL` secret is set correctly
+- **Port conflicts**: Change `port.host` in `config/deploy.yml` if port 3000 is in use
+- **Permission issues**: Ensure the SSH user has sudo privileges
+- **Health check failures**: Verify the application is responding on port 3000 in the container
+
+For more information, see the [Kamal documentation](https://kamal-deploy.org/docs).
