@@ -13,6 +13,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Accept build argument for VITE_API_BASE
+ARG VITE_API_BASE
 ENV VITE_API_BASE=$VITE_API_BASE
 
 # Generate Prisma client

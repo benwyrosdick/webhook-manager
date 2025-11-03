@@ -34,8 +34,8 @@ registry:
 builder:
   arch: amd64
   # Pass in additional build args needed for your Dockerfile.
-  # args:
-  #   RUBY_VERSION: <%= ENV["RBENV_VERSION"] || ENV["rvm_ruby_string"] || "#{RUBY_ENGINE}-#{RUBY_ENGINE_VERSION}" %>
+  args:
+    VITE_API_BASE: <%= ENV["VITE_API_BASE"] %>
 
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
 #
