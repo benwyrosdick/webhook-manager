@@ -1,10 +1,10 @@
-FROM node:20-alpine AS base
+FROM oven/bun:1 AS base
 
 # Install dependencies only when needed
 FROM base AS deps
 WORKDIR /app
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile
 
 # Build the application
 FROM base AS builder
@@ -13,12 +13,12 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma client
-RUN yarn prisma generate
+RUN bun prisma generate
 
 # Build frontend with secret
 RUN --mount=type=secret,id=VITE_API_BASE \
     export VITE_API_BASE=$(cat /run/secrets/VITE_API_BASE) && \
-    yarn build
+    bun run build
 
 # Production image
 FROM base AS runner
@@ -36,5 +36,5 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./
 
 # Run database migrations and start server
-CMD ["sh", "-c", "yarn prisma migrate deploy && yarn prisma generate && node server.js"]
+CMD ["sh", "-c", "bun prisma migrate deploy && bun prisma generate && bun server.js"]
 

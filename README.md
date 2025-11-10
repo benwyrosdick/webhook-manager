@@ -34,7 +34,7 @@ A modern unified web application for receiving, viewing, and forwarding webhooks
 ### Prerequisites
 
 - Node.js (v20.14.0 or higher)
-- Yarn package manager
+- bun package manager
 - PostgreSQL database (local or hosted)
 
 ### Installation
@@ -43,7 +43,7 @@ A modern unified web application for receiving, viewing, and forwarding webhooks
 2. Install dependencies:
 
 ```bash
-yarn install
+bun install
 ```
 
 3. Set up your database configuration:
@@ -70,8 +70,8 @@ DATABASE_URL="postgresql://yourusername@localhost:5432/webhook_manager"
 4. Initialize the database:
 
 ```bash
-yarn prisma:migrate
-yarn prisma:generate
+bun prisma:migrate
+bun prisma:generate
 ```
 
 ### Running the Application
@@ -79,33 +79,33 @@ yarn prisma:generate
 #### Development (Recommended)
 ```bash
 # Start both frontend and backend with hot reload
-yarn dev
+bun dev
 
 # This runs:
 # - Frontend: http://localhost:8080 (with hot reload)
 # - Backend: http://localhost:3000 (with auto-restart)
 
 # Optional: Start ngrok tunnel for public webhook access
-yarn dev:ngrok
+bun dev:ngrok
 ```
 
 #### Alternative Development (Unified)
 ```bash
 # Start unified server (requires manual rebuild after frontend changes)
-yarn dev:backend
+bun dev:backend
 
 # Then rebuild frontend when needed:
-yarn build
+bun build
 ```
 
 #### Production
 ```bash
 # Build frontend and start production server
-yarn build:start
+bun build:start
 
 # Or build and start separately
-yarn build
-yarn start
+bun build
+bun start
 ```
 
 ### Accessing the Application
@@ -118,7 +118,7 @@ yarn start
 **Production:**
 - **Application**: `http://localhost:3000` (serves both frontend and API)
 - **Public Webhook URL**: Check ngrok output for public URL
-- **Database Admin**: `yarn prisma:studio` (optional - opens Prisma Studio)
+- **Database Admin**: `bun prisma:studio` (optional - opens Prisma Studio)
 
 ## Usage
 
@@ -183,16 +183,16 @@ The project includes comprehensive tests using Vitest and React Testing Library:
 
 ```bash
 # Run tests in watch mode
-yarn test
+bun test
 
 # Run tests once
-yarn test:run
+bun test:run
 
 # Run tests with UI
-yarn test:ui
+bun test:ui
 
 # Run tests with coverage
-yarn test:coverage
+bun test:coverage
 ```
 
 **Test Coverage:**
@@ -215,13 +215,13 @@ The application uses PostgreSQL with Prisma ORM for robust data management:
 ### Database Scripts
 ```bash
 # Run database migrations
-yarn prisma:migrate
+bun prisma:migrate
 
 # Generate Prisma client after schema changes
-yarn prisma:generate
+bun prisma:generate
 
 # Open Prisma Studio (database admin UI)
-yarn prisma:studio
+bun prisma:studio
 ```
 
 ### Schema Management
@@ -308,7 +308,7 @@ webhook-manager/
 
 ### Development Tools
 - **Bundler**: Vite with hot module replacement
-- **Package Manager**: Yarn with unified dependencies
+- **Package Manager**: bun with unified dependencies
 - **Tunneling**: ngrok for public webhook access
 - **Development Server**: Nodemon for auto-restart
 - **Testing**: Vitest with React Testing Library
@@ -397,7 +397,7 @@ kamal app details
 kamal app logs -f
 
 # Execute commands in the container
-kamal app exec -- "yarn prisma studio"
+kamal app exec -- "bun prisma studio"
 
 # Rollback to previous version
 kamal rollback
@@ -417,8 +417,8 @@ kamal remove
 Migrations run automatically during deployment via the `CMD` in the Dockerfile. If you need to run migrations manually:
 
 ```bash
-kamal app exec -- "yarn prisma migrate deploy"
-kamal app exec -- "yarn prisma generate"
+kamal app exec -- "bun prisma migrate deploy"
+kamal app exec -- "bun prisma generate"
 ```
 
 ### Troubleshooting
