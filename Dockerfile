@@ -36,5 +36,5 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./
 
 # Run database migrations and start server
-CMD ["sh", "-c", "bun prisma migrate deploy && bun prisma generate && bun server.js"]
+CMD ["sh", "-c", "bun server.js"]
 

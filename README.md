@@ -1,6 +1,6 @@
 # Webhook Manager
 
-A modern unified web application for receiving, viewing, and forwarding webhooks. Built with React, TypeScript, Tailwind CSS, Express.js, and Prisma. Features a sleek gradient interface with syntax highlighting, comprehensive webhook management, preview field extraction, and runs as a single Node.js process.
+A modern unified web application for receiving, viewing, and forwarding webhooks. Built with React, TypeScript, Tailwind CSS, Express.js, and js-record ORM. Features a sleek gradient interface with syntax highlighting, comprehensive webhook management, preview field extraction, and runs as a single Node.js process.
 
 ## Features
 
@@ -69,10 +69,7 @@ DATABASE_URL="postgresql://yourusername@localhost:5432/webhook_manager"
 
 4. Initialize the database:
 
-```bash
-bun prisma:migrate
-bun prisma:generate
-```
+The database tables should already exist from previous Prisma migrations. If you're setting up a fresh database, you'll need to create the tables manually using SQL or migrate from the Prisma schema history.
 
 ### Running the Application
 
@@ -118,7 +115,6 @@ bun start
 **Production:**
 - **Application**: `http://localhost:3000` (serves both frontend and API)
 - **Public Webhook URL**: Check ngrok output for public URL
-- **Database Admin**: `bun prisma:studio` (optional - opens Prisma Studio)
 
 ## Usage
 
@@ -210,32 +206,22 @@ bun test:coverage
 
 ## Database Management
 
-The application uses PostgreSQL with Prisma ORM for robust data management:
+The application uses PostgreSQL with js-record ORM for robust data management:
 
-### Database Scripts
-```bash
-# Run database migrations
-bun prisma:migrate
-
-# Generate Prisma client after schema changes
-bun prisma:generate
-
-# Open Prisma Studio (database admin UI)
-bun prisma:studio
-```
-
-### Schema Management
-- **Migrations**: All database changes are versioned and tracked
-- **Type Safety**: Prisma generates TypeScript types from your schema
-- **Admin Interface**: Prisma Studio provides a web-based database browser
-
-### Environment Configuration
-Database connection is configured via `.env.local`:
+### Database Connection
+Database connection is configured via `.env`:
 ```bash
 DATABASE_URL="postgresql://username:password@host:port/database"
 ```
 
-**Important**: Never commit `.env.local` to version control. It's already included in `.gitignore`.
+**Important**: Never commit `.env` to version control. It's already included in `.gitignore`.
+
+### Schema Management
+The database uses the following tables:
+- `webhooks` - Stores webhook configurations
+- `webhook_requests` - Stores incoming webhook requests
+
+Schema changes need to be applied manually via SQL or a migration tool.
 
 ## Project Structure
 
@@ -253,19 +239,20 @@ webhook-manager/
 │   │   └── api.ts         # HTTP client for backend API
 │   ├── types/             # TypeScript type definitions
 │   │   └── webhook.ts     # Webhook and request types
+│   ├── models/            # Database models (js-record TypeScript)
+│   │   ├── Webhook.ts     # Webhook model
+│   │   ├── WebhookRequest.ts  # WebhookRequest model
+│   │   └── index.ts       # Model exports
+│   ├── db/                # Database configuration
+│   │   └── connection.ts  # PostgreSQL adapter setup
 │   ├── assets/            # Static assets
 │   │   └── icons8-webhook.svg     # Webhook icon (used as favicon)
 │   └── App.tsx            # Main application component with routing
 ├── server.js              # Main Express server (unified frontend + API)
-├── prisma-client.js       # Prisma database client
-├── prisma/                # Database configuration
-│   ├── schema.prisma      # Database schema with webhooks and requests
-│   └── migrations/        # Database migration files
 ├── public/                # Built frontend files (served by Express)
 │   ├── index.html         # Main HTML file
 │   ├── webhook.svg        # Favicon (webhook icon)
 │   └── assets/            # CSS and JS bundles
-├── generated/             # Prisma generated client
 └── package.json           # Unified dependencies
 ```
 
@@ -301,7 +288,7 @@ webhook-manager/
 
 ### Backend
 - **Runtime**: Node.js with Express.js
-- **Database**: PostgreSQL with Prisma ORM
+- **Database**: PostgreSQL with js-record ORM
 - **HTTP Client**: Axios for webhook forwarding
 - **CORS**: Enabled for cross-origin requests
 - **Architecture**: Unified server serving both API and frontend
@@ -312,8 +299,8 @@ webhook-manager/
 - **Tunneling**: ngrok for public webhook access
 - **Development Server**: Nodemon for auto-restart
 - **Testing**: Vitest with React Testing Library
-- **Database**: Prisma for type-safe database operations
-- **Environment Variables**: dotenv-cli for secure credential loading
+- **Database**: js-record ORM for ActiveRecord-style database operations
+- **Environment Variables**: dotenv for secure credential loading
 - **Process Management**: Concurrently for running multiple dev servers
 
 ## Development Features
@@ -412,14 +399,9 @@ kamal app start
 kamal remove
 ```
 
-### Database Migrations
+### Database Setup
 
-Migrations run automatically during deployment via the `CMD` in the Dockerfile. If you need to run migrations manually:
-
-```bash
-kamal app exec -- "bun prisma migrate deploy"
-kamal app exec -- "bun prisma generate"
-```
+The database tables should already exist. If deploying to a fresh database, you'll need to create the necessary tables using SQL scripts or by exporting from an existing database.
 
 ### Troubleshooting
 
