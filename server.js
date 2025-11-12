@@ -207,7 +207,8 @@ async function startServer() {
     const webhook = await Webhook.create({
       path: path,
       target_url: targetUrl || null,
-      preview_field: previewField || null
+      preview_field: previewField || null,
+      active: true
     });
     
     res.status(201).json({ 
