@@ -12,9 +12,6 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma client
-RUN bun prisma generate
-
 # Build frontend with secret
 RUN --mount=type=secret,id=VITE_API_BASE \
     export VITE_API_BASE=$(cat /run/secrets/VITE_API_BASE) && \
