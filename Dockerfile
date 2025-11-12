@@ -26,9 +26,6 @@ ENV NODE_ENV=production
 # Copy necessary files
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/server.js ./
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma-client.js ./
-COPY --from=builder /app/generated ./generated
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./
 
