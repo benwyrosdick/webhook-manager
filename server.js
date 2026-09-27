@@ -143,25 +143,6 @@ async function execute(statement, params = []) {
   return adapter.execute(prepared.sql, prepared.params);
 }
 
-async function findOrCreateWebhook(path) {
-  const existing = await Webhook.findBy({ path });
-  if (existing) return existing;
-
-  try {
-    return await Webhook.create({
-      path,
-      targetUrl: null,
-      active: true,
-    });
-  } catch (error) {
-    if (isUniqueViolation(error)) {
-      const raced = await Webhook.findBy({ path });
-      if (raced) return raced;
-    }
-    throw error;
-  }
-}
-
 async function forwardWebhook(req, targetUrl) {
   const blocked = targetUrlError(targetUrl);
   if (blocked) {
@@ -271,21 +252,15 @@ async function startServer() {
   app.use('/webhook', express.raw({ type: () => true, limit: '10mb' }), async (req, res) => {
     // Mounted at /webhook, so req.path is the remainder (/github, not /webhook/github).
     const webhookPath = req.path.replace(/^\/+|\/+$/g, '');
-    if (!webhookPath) {
-      return res.status(200).json({
-        message: 'Webhook path is required',
-        timestamp: new Date().toISOString(),
-      });
-    }
-    if (webhookPath.length > 200) {
-      return res.status(200).json({
-        message: 'Webhook path is too long',
-        timestamp: new Date().toISOString(),
-      });
+    if (!webhookPath || webhookPath.length > 200) {
+      return res.status(404).json({ error: 'Webhook not found' });
     }
 
     try {
-      const webhook = await findOrCreateWebhook(webhookPath);
+      const webhook = await Webhook.findBy({ path: webhookPath });
+      if (!webhook) {
+        return res.status(404).json({ error: 'Webhook not found' });
+      }
       let relayStatus = null;
       let relayResponse = null;
       let forwarded = false;

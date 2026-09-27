@@ -100,7 +100,7 @@ bun start
 
 ### Receiving Webhooks
 
-Send HTTP requests to `http://localhost:3000/webhook/{path}` where `{path}` is any string you choose.
+Send HTTP requests to `http://localhost:3000/webhook/{path}` using a path you have already created. An unknown path returns 404 and is not stored.
 
 **Local Example:**
 ```bash
@@ -239,10 +239,11 @@ webhook-manager/
 ## API Endpoints
 
 ### Webhook Endpoints
-- `POST/GET/PUT/DELETE /webhook/*` - Receive webhooks and forward if target URL configured
-  - Always returns 200 status for reliable webhook handling
-  - Stores all requests in database for inspection
-  - Forwards to target URLs when configured
+- `POST/GET/PUT/DELETE /webhook/*` - Receive webhooks and forward if a target URL is configured
+  - Returns 404 when that path has no webhook
+  - Returns 200 for a configured webhook, including when forwarding fails
+  - Stores requests for configured webhooks
+  - Forwards to the target URL when one is set and the webhook is active
 
 ### Webhook Management
 - `GET /api/webhooks` - Get all configured webhooks
