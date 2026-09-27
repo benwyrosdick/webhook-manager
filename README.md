@@ -77,8 +77,6 @@ bun dev
 
 Open `http://localhost:3000`. Webhooks are received at `http://localhost:3000/webhook/your-path`.
 
-Set `AUTH_PASSWORD` in `.env` to require a login. Leave it empty while developing locally. In production the server refuses to start without it.
-
 ```bash
 # Optional public tunnel
 bun dev:ngrok
@@ -324,10 +322,7 @@ This application is configured for deployment using [Kamal](https://kamal-deploy
    ```bash
    kamal secret set DATABASE_URL postgresql://user:password@host:5432/webhook_manager
    kamal secret set KAMAL_REGISTRY_PASSWORD your-github-token
-   kamal secret set AUTH_PASSWORD a-long-random-password
    ```
-
-   Sign in to the app with username `admin` and that password. Webhook ingress at `/webhook/...` stays public. The management UI and API require the password.
 
 3. **Configure database**:
    - You can use an external PostgreSQL database

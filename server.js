@@ -1,12 +1,9 @@
-import crypto from 'crypto';
 import express from 'express';
 import { Webhook, WebhookRequest } from './src/models/index.js';
 import { targetUrlError } from './src/lib/target-url.js';
 
 const PORT = process.env.PORT || 3000;
 const isDevelopment = process.env.NODE_ENV !== 'production';
-const authUsername = process.env.AUTH_USERNAME || 'admin';
-const authPassword = process.env.AUTH_PASSWORD || '';
 const RELAY_RESPONSE_LIMIT = 100_000;
 const HOP_BY_HOP = new Set([
   'host',
@@ -22,43 +19,8 @@ const HOP_BY_HOP = new Set([
   'content-length',
 ]);
 
-if (!isDevelopment && !authPassword) {
-  console.error('AUTH_PASSWORD is required when NODE_ENV is production');
-  process.exit(1);
-}
-
-function passwordsMatch(left, right) {
-  const leftHash = crypto.createHash('sha256').update(left).digest();
-  const rightHash = crypto.createHash('sha256').update(right).digest();
-  return crypto.timingSafeEqual(leftHash, rightHash);
-}
-
 function requestPath(req) {
   return (req.originalUrl || req.path || '').split('?')[0];
-}
-
-function isPublicPath(path) {
-  return path === '/up' || path === '/webhook' || path.startsWith('/webhook/');
-}
-
-function requireAuth(req, res, next) {
-  if (isPublicPath(requestPath(req))) return next();
-  if (!authPassword) return next();
-
-  const header = req.headers.authorization || '';
-  const [scheme, encoded] = header.split(' ');
-  if (scheme === 'Basic' && encoded) {
-    const decoded = Buffer.from(encoded, 'base64').toString('utf8');
-    const separator = decoded.indexOf(':');
-    const user = separator === -1 ? '' : decoded.slice(0, separator);
-    const password = separator === -1 ? '' : decoded.slice(separator + 1);
-    if (passwordsMatch(user, authUsername) && passwordsMatch(password, authPassword)) {
-      return next();
-    }
-  }
-
-  res.set('WWW-Authenticate', 'Basic realm="Webhook Manager"');
-  return res.status(401).send('Authentication required');
 }
 
 function parseId(value) {
@@ -299,7 +261,6 @@ async function startServer() {
   const app = express();
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
-  app.use(requireAuth);
 
   app.get('/up', (_req, res) => {
     res.status(200).json({ ok: true });
@@ -622,9 +583,6 @@ async function startServer() {
 
   app.listen(PORT, () => {
     console.log(`Webhook server running on port ${PORT}`);
-    if (!authPassword) {
-      console.log('AUTH_PASSWORD is not set; the management UI is open');
-    }
   });
 }
 
