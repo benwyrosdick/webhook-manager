@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import type { Webhook } from '../types/webhook';
 import { api } from '../services/api';
@@ -8,6 +8,8 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { useToast, ToastContainer } from './ui/toast';
 import { Plus, Save, X, Copy, Eye, Trash2, Edit } from 'lucide-react';
+import { webhookUrl } from '../lib/public-url';
+import { targetUrlError } from '../lib/target-url';
 
 // Webhook Icon Component
 const WebhookIcon = ({ className }: { className?: string }) => (
@@ -32,45 +34,60 @@ export default function WebhookList() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editData, setEditData] = useState<Partial<Webhook>>({});
   const [loading, setLoading] = useState(true);
-  const { toasts, removeToast, success, error } = useToast();
+  const { toasts, removeToast, success, error: showError } = useToast();
 
-  const fetchWebhooks = async () => {
+  const fetchWebhooks = useCallback(async () => {
     try {
-      setLoading(true);
       const data = await api.getWebhooks();
       setWebhooks(data);
-    } catch (error) {
-      console.error('Failed to fetch webhooks:', error);
+    } catch (err) {
+      console.error('Failed to fetch webhooks:', err);
+      showError('Could not load webhooks', 'Failed to fetch webhooks');
     } finally {
       setLoading(false);
     }
-  };
+  }, [showError]);
 
   useEffect(() => {
     fetchWebhooks();
-  }, []);
+  }, [fetchWebhooks]);
 
   const handleCreateWebhook = async () => {
-    if (!newWebhook.path) return;
+    if (!newWebhook.path.trim()) return;
+    const blocked = targetUrlError(newWebhook.targetUrl);
+    if (blocked) {
+      showError('Could not create webhook', blocked);
+      return;
+    }
     
     try {
-      await api.createWebhook(newWebhook.path, newWebhook.targetUrl, newWebhook.previewField);
+      await api.createWebhook(newWebhook.path.trim(), newWebhook.targetUrl.trim(), newWebhook.previewField.trim());
       setNewWebhook({ path: '', targetUrl: '', previewField: '' });
       setShowAddForm(false);
+      success('Webhook created', 'The webhook is ready to receive requests');
       fetchWebhooks();
-    } catch (error) {
-      console.error('Failed to create webhook:', error);
+    } catch (err) {
+      console.error('Failed to create webhook:', err);
+      showError('Could not create webhook', err instanceof Error ? err.message : 'Failed to create webhook');
     }
   };
 
   const handleUpdateWebhook = async (id: number) => {
+    const blocked = targetUrlError(editData.targetUrl);
+    if (blocked) {
+      showError('Could not update webhook', blocked);
+      return;
+    }
+
     try {
       await api.updateWebhook(id, editData);
       setEditingId(null);
       setEditData({});
+      success('Webhook updated', 'Changes were saved');
       fetchWebhooks();
-    } catch (error) {
-      console.error('Failed to update webhook:', error);
+    } catch (err) {
+      console.error('Failed to update webhook:', err);
+      showError('Could not update webhook', err instanceof Error ? err.message : 'Failed to update webhook');
     }
   };
 
@@ -79,9 +96,11 @@ export default function WebhookList() {
     
     try {
       await api.deleteWebhook(id);
+      success('Webhook deleted', 'The webhook and its requests were removed');
       fetchWebhooks();
-    } catch (error) {
-      console.error('Failed to delete webhook:', error);
+    } catch (err) {
+      console.error('Failed to delete webhook:', err);
+      showError('Could not delete webhook', err instanceof Error ? err.message : 'Failed to delete webhook');
     }
   };
 
@@ -104,17 +123,13 @@ export default function WebhookList() {
     return new Date(timestamp).toLocaleString();
   };
 
-  const getWebhookUrl = (path: string) => {
-    return `${import.meta.env.VITE_API_BASE}/webhook/${path}`;
-  };
-
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
       success('Copied to clipboard', 'Webhook URL has been copied to your clipboard');
     } catch (err) {
       console.error('Failed to copy to clipboard:', err);
-      error('Copy failed', 'Failed to copy webhook URL to clipboard');
+      showError('Copy failed', 'Failed to copy webhook URL to clipboard');
     }
   };
 
@@ -165,7 +180,7 @@ export default function WebhookList() {
                   className="bg-white/80"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Will be accessible at: <code className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-mono text-xs">{import.meta.env.VITE_API_BASE}/webhook/{newWebhook.path || 'your-path'}</code>
+                  Will be accessible at: <code className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-mono text-xs">{webhookUrl(newWebhook.path || 'your-path')}</code>
                 </p>
               </div>
               <div>
@@ -306,10 +321,11 @@ export default function WebhookList() {
                             </div>
                             <div className="text-xs text-gray-500 flex items-center gap-1 mb-2">
                               <span className="font-mono bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                {getWebhookUrl(webhook.path)}
+                                {webhookUrl(webhook.path)}
                               </span>
                               <button
-                                onClick={() => copyToClipboard(getWebhookUrl(webhook.path))}
+                                onClick={() => copyToClipboard(webhookUrl(webhook.path))}
+                                aria-label="Copy webhook URL"
                                 className="hover:text-blue-600 transition-colors"
                                 title="Copy webhook URL"
                               >
@@ -337,8 +353,8 @@ export default function WebhookList() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-14 gap-4 text-sm">
-                          <div className="col-span-7">
+                        <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 xl:grid-cols-12">
+                          <div className="sm:col-span-2 xl:col-span-5">
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Target URL</label>
                             <div className="mt-1 font-mono text-sm">
                               {webhook.targetUrl ? (
@@ -348,7 +364,7 @@ export default function WebhookList() {
                               )}
                             </div>
                           </div>
-                          <div className="col-span-3">
+                          <div className="xl:col-span-3">
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Preview Field</label>
                             <div className="mt-1 font-mono text-sm">
                               {webhook.previewField ? (
@@ -358,7 +374,7 @@ export default function WebhookList() {
                               )}
                             </div>
                           </div>
-                          <div className="col-span-2">
+                          <div className="xl:col-span-2">
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Requests</label>
                             <div className="mt-1">
                               <Link 
@@ -366,11 +382,11 @@ export default function WebhookList() {
                                 className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline font-medium"
                               >
                                 <Eye className="h-3 w-3" />
-                                {(webhook as any).requestCount || 0} requests
+                                {webhook.requestCount || 0} requests
                               </Link>
                             </div>
                           </div>
-                          <div className="col-span-2">
+                          <div className="xl:col-span-2">
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Created</label>
                             <div className="mt-1 text-gray-600">
                               {formatTimestamp(webhook.createdAt)}

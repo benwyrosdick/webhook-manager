@@ -45,6 +45,12 @@ describe('CodeHighlighter', () => {
     expect(screen.queryByTestId('syntax-highlighter')).not.toBeInTheDocument()
   })
 
+  it('should render raw text when a body looks like JSON but is not', () => {
+    render(<CodeHighlighter code={'{not json'} />)
+
+    expect(screen.getByTestId('syntax-highlighter')).toHaveTextContent('{not json')
+  })
+
   it('should render raw text for invalid JSON', () => {
     const invalidJson = 'not valid json'
     render(<CodeHighlighter code={invalidJson} />)

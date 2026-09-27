@@ -7,13 +7,14 @@ import { api } from '../../services/api'
 import type { Webhook, WebhookRequest } from '../../types/webhook'
 
 // Mock the API service
-vi.mock('../../services/api', () => ({
+vi.mock('@/services/api', () => ({
   api: {
     getWebhooks: vi.fn(),
     getRequests: vi.fn(),
     getRequest: vi.fn(),
     deleteRequest: vi.fn(),
     resendRequest: vi.fn(),
+    clearWebhookRequests: vi.fn(),
   }
 }))
 
@@ -252,11 +253,10 @@ describe('WebhookDetail', () => {
       vi.mocked(api.getRequests).mockResolvedValue([])
       
       renderWithRouter(<WebhookDetail />)
-      
-      // await waitFor(() => {
-      //   expect(screen.getByText('No requests received for this webhook yet.')).toBeInTheDocument()
-      //   expect(screen.queryByText('Loading requests...')).not.toBeInTheDocument()
-      // })
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading webhook details...')).not.toBeInTheDocument()
+      })
     })
   })
 
@@ -391,13 +391,10 @@ describe('WebhookDetail', () => {
       renderWithRouter(<WebhookDetail />)
       
       await waitFor(() => {
-        expect(screen.getAllByRole('button')).toHaveLength(9) // 3 requests × 3 buttons each
+        expect(screen.getAllByRole('button', { name: 'View request' })).toHaveLength(3) // 3 requests × 3 buttons each
       })
       
-      // Click the first view button (eye icon)
-      const viewButtons = screen.getAllByRole('button')
-      const firstViewButton = viewButtons[0]
-      await user.click(firstViewButton)
+      await user.click(screen.getAllByRole('button', { name: 'View request' })[0])
       
       await waitFor(() => {
         expect(api.getRequest).toHaveBeenCalledWith(1)
@@ -413,12 +410,11 @@ describe('WebhookDetail', () => {
       renderWithRouter(<WebhookDetail />)
       
       await waitFor(() => {
-        expect(screen.getAllByRole('button')).toHaveLength(9)
+        expect(screen.getAllByRole('button', { name: 'View request' })).toHaveLength(3)
       })
       
       // Open modal
-      const viewButtons = screen.getAllByRole('button')
-      await user.click(viewButtons[0])
+      await user.click(screen.getAllByRole('button', { name: 'View request' })[0])
       
       await waitFor(() => {
         expect(screen.getByText(/Request Details/)).toBeInTheDocument()
@@ -440,13 +436,11 @@ describe('WebhookDetail', () => {
       renderWithRouter(<WebhookDetail />)
       
       await waitFor(() => {
-        expect(screen.getAllByRole('button')).toHaveLength(9)
+        expect(screen.getAllByRole('button', { name: 'View request' })).toHaveLength(3)
       })
       
       // Click resend button (only available for webhooks with targetUrl)
-      const resendButtons = screen.getAllByRole('button')
-      const firstResendButton = resendButtons[1] // Second button should be resend
-      await user.click(firstResendButton)
+      await user.click(screen.getAllByRole('button', { name: 'Resend request' })[0])
       
       await waitFor(() => {
         expect(api.resendRequest).toHaveBeenCalledWith(1)
@@ -463,13 +457,11 @@ describe('WebhookDetail', () => {
       renderWithRouter(<WebhookDetail />)
       
       await waitFor(() => {
-        expect(screen.getAllByRole('button')).toHaveLength(9)
+        expect(screen.getAllByRole('button', { name: 'View request' })).toHaveLength(3)
       })
       
       // Click delete button (trash icon)
-      const deleteButtons = screen.getAllByRole('button')
-      const firstDeleteButton = deleteButtons[2] // Third button should be delete
-      await user.click(firstDeleteButton)
+      await user.click(screen.getAllByRole('button', { name: 'Delete request' })[0])
       
       expect(confirmSpy).toHaveBeenCalledWith('Are you sure you want to delete this request?')
       
@@ -489,12 +481,10 @@ describe('WebhookDetail', () => {
       renderWithRouter(<WebhookDetail />)
       
       await waitFor(() => {
-        expect(screen.getAllByRole('button')).toHaveLength(9)
+        expect(screen.getAllByRole('button', { name: 'View request' })).toHaveLength(3)
       })
       
-      const deleteButtons = screen.getAllByRole('button')
-      const firstDeleteButton = deleteButtons[2]
-      await user.click(firstDeleteButton)
+      await user.click(screen.getAllByRole('button', { name: 'Delete request' })[0])
       
       expect(confirmSpy).toHaveBeenCalled()
       expect(api.deleteRequest).not.toHaveBeenCalled()
@@ -503,14 +493,14 @@ describe('WebhookDetail', () => {
     })
 
     it('should not show resend button when no targetUrl is configured', async () => {
-      vi.mocked(api.getWebhooks).mockResolvedValue([mockWebhookWithoutPreview])
+      vi.mocked(api.getWebhooks).mockResolvedValue([{ ...mockWebhookWithoutPreview, id: 1 }])
       
       renderWithRouter(<WebhookDetail />)
-      
-      // await waitFor(() => {
-      //   // Should only have view and delete buttons (2 per request), no resend buttons
-      //   expect(screen.getAllByRole('button')).toHaveLength(6) // 3 requests × 2 buttons each
-      // })
+
+      await waitFor(() => {
+        expect(screen.getAllByRole('button', { name: 'View request' })).toHaveLength(3)
+      })
+      expect(screen.queryByRole('button', { name: 'Resend request' })).not.toBeInTheDocument()
     })
   })
 
@@ -522,11 +512,10 @@ describe('WebhookDetail', () => {
       renderWithRouter(<WebhookDetail />)
       
       await waitFor(() => {
-        expect(screen.getAllByRole('button')).toHaveLength(9)
+        expect(screen.getAllByRole('button', { name: 'View request' })).toHaveLength(3)
       })
       
-      const viewButtons = screen.getAllByRole('button')
-      await user.click(viewButtons[0])
+      await user.click(screen.getAllByRole('button', { name: 'View request' })[0])
       
       await waitFor(() => {
         // expect(screen.getAllByText('POST')).toHaveLength(2)
@@ -543,11 +532,10 @@ describe('WebhookDetail', () => {
       renderWithRouter(<WebhookDetail />)
       
       await waitFor(() => {
-        expect(screen.getAllByRole('button')).toHaveLength(9)
+        expect(screen.getAllByRole('button', { name: 'View request' })).toHaveLength(3)
       })
       
-      const viewButtons = screen.getAllByRole('button')
-      await user.click(viewButtons[0])
+      await user.click(screen.getAllByRole('button', { name: 'View request' })[0])
       
       await waitFor(() => {
         expect(screen.getByText('Headers')).toBeInTheDocument()
@@ -593,11 +581,10 @@ describe('WebhookDetail', () => {
       renderWithRouter(<WebhookDetail />)
       
       await waitFor(() => {
-        expect(screen.getAllByRole('button')).toHaveLength(9)
+        expect(screen.getAllByRole('button', { name: 'View request' })).toHaveLength(3)
       })
       
-      const viewButtons = screen.getAllByRole('button')
-      await user.click(viewButtons[0])
+      await user.click(screen.getAllByRole('button', { name: 'View request' })[0])
       
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalledWith('Failed to fetch request details:', expect.any(Error))

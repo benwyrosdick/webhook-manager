@@ -1,514 +1,634 @@
+import crypto from 'crypto';
 import express from 'express';
-import cors from 'cors';
-import bodyParser from 'body-parser';
-import axios from 'axios';
 import { Webhook, WebhookRequest } from './src/models/index.js';
+import { targetUrlError } from './src/lib/target-url.js';
 
 const PORT = process.env.PORT || 3000;
 const isDevelopment = process.env.NODE_ENV !== 'production';
+const authUsername = process.env.AUTH_USERNAME || 'admin';
+const authPassword = process.env.AUTH_PASSWORD || '';
+const RELAY_RESPONSE_LIMIT = 100_000;
+const HOP_BY_HOP = new Set([
+  'host',
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailers',
+  'trailer',
+  'transfer-encoding',
+  'upgrade',
+  'content-length',
+]);
 
-async function startServer() {
-  const app = express();
+if (!isDevelopment && !authPassword) {
+  console.error('AUTH_PASSWORD is required when NODE_ENV is production');
+  process.exit(1);
+}
 
-  // Middleware
-  app.use(cors());
-  app.use(bodyParser.json({ limit: '10mb' }));
-  app.use(bodyParser.text({ type: '*/*', limit: '10mb' }));
+function passwordsMatch(left, right) {
+  const leftHash = crypto.createHash('sha256').update(left).digest();
+  const rightHash = crypto.createHash('sha256').update(right).digest();
+  return crypto.timingSafeEqual(leftHash, rightHash);
+}
 
-  // Find or create webhook and store webhook request
-  const storeWebhookRequest = async (req, webhookPath, relayStatus = null, relayResponse = null) => {
-  try {
-    // Find or create webhook
-    let webhook = await Webhook.findBy({ path: webhookPath });
-    
-    if (!webhook) {
-      // Create new webhook with empty target URL (user can set it later)
-      webhook = await Webhook.create({
-        path: webhookPath,
-        target_url: '',
-        active: true
-      });
-      console.log(`Created new webhook for path: ${webhookPath}`);
+function requestPath(req) {
+  return (req.originalUrl || req.path || '').split('?')[0];
+}
+
+function isPublicPath(path) {
+  return path === '/up' || path === '/webhook' || path.startsWith('/webhook/');
+}
+
+function requireAuth(req, res, next) {
+  if (isPublicPath(requestPath(req))) return next();
+  if (!authPassword) return next();
+
+  const header = req.headers.authorization || '';
+  const [scheme, encoded] = header.split(' ');
+  if (scheme === 'Basic' && encoded) {
+    const decoded = Buffer.from(encoded, 'base64').toString('utf8');
+    const separator = decoded.indexOf(':');
+    const user = separator === -1 ? '' : decoded.slice(0, separator);
+    const password = separator === -1 ? '' : decoded.slice(separator + 1);
+    if (passwordsMatch(user, authUsername) && passwordsMatch(password, authPassword)) {
+      return next();
     }
-    
-    // Store the request linked to the webhook
-    const webhookRequest = await WebhookRequest.create({
-      method: req.method,
-      url: req.originalUrl,
-      headers: JSON.stringify(req.headers),
-      body: typeof req.body === 'string' ? req.body : JSON.stringify(req.body),
-      query_params: JSON.stringify(req.query),
-      ip_address: req.ip,
-      user_agent: req.get('User-Agent') || '',
-      relay_status: relayStatus,
-      relay_response: relayResponse,
-      webhook_id: webhook.id
-    });
-    
-    return { webhook, webhookRequest };
-  } catch (error) {
-    console.error('Failed to store webhook request:', error);
-    throw error;
   }
-};
 
-  // Forward webhook to target URL
-  const forwardWebhook = async (req, targetUrl) => {
-  console.log(`Forwarding ${req.method} to ${targetUrl}`);
+  res.set('WWW-Authenticate', 'Basic realm="Webhook Manager"');
+  return res.status(401).send('Authentication required');
+}
+
+function parseId(value) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const id = Number(raw);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  return id;
+}
+
+function boundedInt(value, fallback, min, max) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const parsed = Number.parseInt(String(raw ?? ''), 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(Math.max(parsed, min), max);
+}
+
+function parseJson(value, fallback) {
+  if (value == null || value === '') return fallback;
+  if (typeof value === 'object') return value;
   try {
-    // Clean headers to avoid forwarding issues
-    const cleanHeaders = { ...req.headers };
-    delete cleanHeaders.host;
-    delete cleanHeaders.connection;
-    delete cleanHeaders['content-length'];
-    
-    const response = await axios({
-      method: req.method,
-      url: targetUrl,
-      headers: cleanHeaders,
-      data: req.body,
-      params: req.query,
-      timeout: 10000, // Reduced timeout
-      validateStatus: () => true, // Accept all status codes
-    });
-    
-    console.log(`Forward response: ${response.status}`);
-    return { 
-      success: true, 
-      status: response.status, 
-      data: response.data,
-      relayStatus: `${response.status}`,
-      relayResponse: JSON.stringify({ status: response.status, data: response.data })
-    };
-  } catch (error) {
-    console.error(`Forward error:`, error.message);
-    return { 
-      success: false, 
-      status: error.response?.status || 500, 
-      error: error.message,
-      relayStatus: 'error',
-      relayResponse: JSON.stringify({ error: error.message, status: error.response?.status || 500 })
-    };
+    return JSON.parse(value);
+  } catch {
+    return fallback;
   }
-};
+}
 
-  // Webhook endpoint handler
-  app.all('/webhook/*', async (req, res) => {
-  const webhookPath = req.params[0] || '';
-  console.log(`Received ${req.method} request for webhook path: ${webhookPath}`);
-  
-  let relayStatus = null;
-  let relayResponse = null;
-  
-  try {
-    // Check if there's a webhook with a target URL for this path
-    console.log('Checking for webhook...');
-    const webhook = await Webhook.where({ path: webhookPath, active: true }).first();
-    
-    if (webhook && webhook.targetUrl) {
-      console.log(`Found webhook with target URL: ${webhook.targetUrl}`);
-      // Forward the webhook
-      const result = await forwardWebhook(req, webhook.targetUrl);
-      console.log('Forward result:', result);
-      
-      relayStatus = result.relayStatus;
-      relayResponse = result.relayResponse;
-      
-      // Store the request with relay information
-      await storeWebhookRequest(req, webhookPath, relayStatus, relayResponse);
-      console.log('Request stored in database with relay info');
-      
-      // Always return 200 regardless of forwarding result
-      if (result.success) {
-        console.log('Forwarding succeeded, sending acknowledgment');
-        res.status(200).json({ 
-          message: 'Webhook received and forwarded', 
-          timestamp: new Date().toISOString(),
-          forwarded: true,
-          forward_status: result.status
-        });
-      } else {
-        console.log('Forwarding failed, but still sending acknowledgment');
-        res.status(200).json({ 
-          message: 'Webhook received but forwarding failed', 
-          timestamp: new Date().toISOString(),
-          forwarded: false,
-          forward_error: result.error
-        });
-      }
-    } else {
-      console.log('No webhook with target URL found, creating/updating webhook and storing request');
-      // Store the request (this will create webhook if it doesn't exist)
-      await storeWebhookRequest(req, webhookPath, relayStatus, relayResponse);
-      console.log('Request stored in database');
-      
-      // No target URL configured, just acknowledge receipt
-      res.status(200).json({ 
-        message: 'Webhook received', 
-        timestamp: new Date().toISOString(),
-        note: webhook ? 'No target URL configured for this webhook' : 'New webhook created - configure target URL to enable forwarding'
-      });
-    }
-  } catch (err) {
-    console.error('Database error:', err);
-    // Try to store the request anyway, but without relay info
-    try {
-      await storeWebhookRequest(req, webhookPath, 'error', JSON.stringify({ error: 'Database error during processing' }));
-    } catch (storeError) {
-      console.error('Failed to store request after database error:', storeError);
-    }
-    
-    // Still return 200 to acknowledge webhook receipt
-    res.status(200).json({ 
-      message: 'Webhook received but database error occurred', 
-      timestamp: new Date().toISOString(),
-      error: 'Database error'
-    });
-  }
-});
+function isUniqueViolation(error) {
+  return error?.code === '23505' || /duplicate key/i.test(error?.message || '');
+}
 
-  // API Routes
+function publicError(res, status, message) {
+  return res.status(status).json({ error: message });
+}
 
-  // Get all webhooks (new API)
-  app.get('/api/webhooks', async (req, res) => {
-  try {
-    const webhooks = await Webhook.orderBy('created_at', 'DESC').all();
+function loadAll(model, rows) {
+  return rows.map((row) => model.instantiate(row));
+}
 
-    // Count requests for each webhook
-    const parsedWebhooks = await Promise.all(webhooks.map(async webhook => {
-      const requestCount = await WebhookRequest.where({ webhook_id: webhook.id }).count();
-      return {
-        id: webhook.id,
-        path: webhook.path,
-        targetUrl: webhook.targetUrl,
-        previewField: webhook.previewField,
-        active: webhook.active,
-        createdAt: webhook.createdAt,
-        updatedAt: webhook.updatedAt,
-        requestCount: requestCount
-      };
-    }));
-    
-    res.json(parsedWebhooks);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+function serializeWebhook(webhook, requestCount = 0) {
+  return {
+    id: webhook.id,
+    path: webhook.path,
+    targetUrl: webhook.targetUrl,
+    previewField: webhook.previewField,
+    active: webhook.active,
+    createdAt: webhook.createdAt,
+    updatedAt: webhook.updatedAt,
+    requestCount,
+  };
+}
 
-  // Create webhook (new API)
-  app.post('/api/webhooks', async (req, res) => {
-  const { path, targetUrl, previewField } = req.body;
-  
-  if (!path) {
-    return res.status(400).json({ error: 'path is required' });
-  }
-  
-  try {
-    const webhook = await Webhook.create({
-      path: path,
-      target_url: targetUrl || null,
-      preview_field: previewField || null,
-      active: true
-    });
-    
-    res.status(201).json({ 
-      id: webhook.id, 
-      path: webhook.path, 
-      targetUrl: webhook.targetUrl,
-      previewField: webhook.previewField,
-      active: webhook.active,
-      createdAt: webhook.createdAt,
-      updatedAt: webhook.updatedAt
-    });
-  } catch (error) {
-    // Check for unique constraint violation
-    if (error.message && error.message.includes('duplicate key')) {
-      return res.status(409).json({ error: 'Webhook path already exists' });
-    }
-    res.status(500).json({ error: error.message });
-  }
-});
-
-  // Update webhook (new API)
-  app.put('/api/webhooks/:id', async (req, res) => {
-  const { path, targetUrl, active, previewField } = req.body;
-  
-  try {
-    const webhook = await Webhook.find(parseInt(req.params.id));
-    
-    if (!webhook) {
-      return res.status(404).json({ error: 'Webhook not found' });
-    }
-    
-    await webhook.update({
-      path: path,
-      target_url: targetUrl,
-      active: active,
-      preview_field: previewField
-    });
-    
-    res.json({ 
-      id: webhook.id,
-      path: webhook.path,
-      targetUrl: webhook.targetUrl,
-      previewField: webhook.previewField,
-      active: webhook.active,
-      createdAt: webhook.createdAt,
-      updatedAt: webhook.updatedAt
-    });
-  } catch (error) {
-    if (error.message && error.message.includes('duplicate key')) {
-      return res.status(409).json({ error: 'Webhook path already exists' });
-    }
-    res.status(500).json({ error: error.message });
-  }
-});
-
-  // Delete webhook (new API)
-  app.delete('/api/webhooks/:id', async (req, res) => {
-  try {
-    const webhook = await Webhook.find(parseInt(req.params.id));
-    
-    if (!webhook) {
-      return res.status(404).json({ error: 'Webhook not found' });
-    }
-    
-    await webhook.destroy();
-    
-    res.json({ message: 'Webhook deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-  // Get all webhook requests (optionally filtered by webhook ID)
-  app.get('/api/requests', async (req, res) => {
-  try {
-    const limit = parseInt(req.query.limit) || 100;
-    const offset = parseInt(req.query.offset) || 0;
-    const webhookId = req.query.webhookId ? parseInt(req.query.webhookId) : undefined;
-    
-    let query = WebhookRequest.orderBy('timestamp', 'DESC').limit(limit).offset(offset);
-    
-    if (webhookId) {
-      query = query.where({ webhook_id: webhookId });
-    }
-    
-    const requests = await query.all();
-    
-    // Load webhook data for each request
-    const parsedRequests = await Promise.all(requests.map(async row => {
-      const webhook = await Webhook.find(row.webhook_id);
-      return {
-        id: row.id,
-        method: row.method,
-        url: row.url,
-        headers: JSON.parse(row.headers || '{}'),
-        body: row.body,
-        queryParams: JSON.parse(row.query_params || '{}'),
-        timestamp: row.timestamp,
-        ipAddress: row.ip_address,
-        userAgent: row.user_agent,
-        relayStatus: row.relay_status,
-        relayResponse: row.relay_response,
-        webhookId: row.webhook_id,
-        webhook: webhook ? {
+function serializeRequest(request, webhook) {
+  return {
+    id: request.id,
+    method: request.method,
+    url: request.url,
+    headers: parseJson(request.headers, {}),
+    body: request.body,
+    queryParams: parseJson(request.queryParams, {}),
+    timestamp: request.timestamp,
+    ipAddress: request.ipAddress,
+    userAgent: request.userAgent,
+    relayStatus: request.relayStatus,
+    relayResponse: request.relayResponse,
+    webhookId: request.webhookId,
+    webhook: webhook
+      ? {
           id: webhook.id,
           path: webhook.path,
           targetUrl: webhook.targetUrl,
-          active: webhook.active
-        } : null,
-        // Legacy fields for backward compatibility
-        query_params: JSON.parse(row.query_params || '{}'),
-        ip_address: row.ip_address,
-        user_agent: row.user_agent
-      };
-    }));
-    
-    res.json(parsedRequests);
-  } catch (error) {
-    console.error({ error: error.message })
-    res.status(500).json({ error: error.message });
-  }
-});
+          active: webhook.active,
+        }
+      : null,
+  };
+}
 
-  // Get single webhook request
+function rawBodyOf(req) {
+  if (Buffer.isBuffer(req.rawBody)) return req.rawBody;
+  if (Buffer.isBuffer(req.body)) return req.body;
+  if (typeof req.body === 'string') return Buffer.from(req.body);
+  if (req.body == null) return Buffer.alloc(0);
+  return Buffer.from(JSON.stringify(req.body));
+}
+
+function headerMap(headers) {
+  const cleaned = {};
+  for (const [key, value] of Object.entries(headers || {})) {
+    if (HOP_BY_HOP.has(key.toLowerCase()) || value == null) continue;
+    cleaned[key] = Array.isArray(value) ? value.join(', ') : String(value);
+  }
+  return cleaned;
+}
+
+function forwardUrl(targetUrl, query) {
+  const url = new URL(targetUrl);
+  for (const [key, value] of Object.entries(query || {})) {
+    if (Array.isArray(value)) {
+      for (const item of value) url.searchParams.append(key, String(item));
+    } else if (value != null) {
+      url.searchParams.append(key, String(value));
+    }
+  }
+  return url.toString();
+}
+
+function clip(text) {
+  if (text.length <= RELAY_RESPONSE_LIMIT) return text;
+  return text.slice(0, RELAY_RESPONSE_LIMIT);
+}
+
+async function sql(statement, params = []) {
+  const adapter = Webhook.getAdapter();
+  const prepared = adapter.convertPlaceholders(statement, params);
+  return adapter.query(prepared.sql, prepared.params);
+}
+
+async function execute(statement, params = []) {
+  const adapter = Webhook.getAdapter();
+  const prepared = adapter.convertPlaceholders(statement, params);
+  return adapter.execute(prepared.sql, prepared.params);
+}
+
+async function findOrCreateWebhook(path) {
+  const existing = await Webhook.findBy({ path });
+  if (existing) return existing;
+
+  try {
+    return await Webhook.create({
+      path,
+      targetUrl: null,
+      active: true,
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      const raced = await Webhook.findBy({ path });
+      if (raced) return raced;
+    }
+    throw error;
+  }
+}
+
+async function forwardWebhook(req, targetUrl) {
+  const blocked = targetUrlError(targetUrl);
+  if (blocked) {
+    return {
+      success: false,
+      status: 400,
+      relayStatus: 'error',
+      relayResponse: JSON.stringify({ error: blocked }),
+    };
+  }
+
+  const method = String(req.method || 'POST').toUpperCase();
+  const body = rawBodyOf(req);
+  const sendBody = method !== 'GET' && method !== 'HEAD';
+
+  try {
+    const response = await fetch(forwardUrl(targetUrl, req.query), {
+      method,
+      headers: headerMap(req.headers),
+      body: sendBody ? body : undefined,
+      redirect: 'manual',
+      signal: AbortSignal.timeout(10000),
+    });
+    const text = clip(await response.text());
+    return {
+      success: true,
+      status: response.status,
+      relayStatus: String(response.status),
+      relayResponse: JSON.stringify({ status: response.status, data: text }),
+    };
+  } catch (error) {
+    const message = error?.name === 'TimeoutError' ? 'Forward timed out' : 'Forward failed';
+    return {
+      success: false,
+      status: 500,
+      relayStatus: 'error',
+      relayResponse: JSON.stringify({ error: message }),
+    };
+  }
+}
+
+async function storeWebhookRequest(req, webhook, relayStatus, relayResponse) {
+  const body = rawBodyOf(req).toString('utf8');
+  return WebhookRequest.create({
+    method: req.method,
+    url: req.originalUrl,
+    headers: JSON.stringify(req.headers || {}),
+    body,
+    queryParams: JSON.stringify(req.query || {}),
+    timestamp: new Date(),
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent') || '',
+    relayStatus,
+    relayResponse,
+    webhookId: webhook.id,
+  });
+}
+
+function nullableText(value) {
+  if (value == null) return null;
+  const trimmed = String(value).trim();
+  return trimmed ? trimmed : null;
+}
+
+function webhookChanges(body) {
+  const changes = {};
+  if (body.path !== undefined) {
+    const path = String(body.path).trim();
+    if (!path) return { error: 'path is required' };
+    if (path.length > 200) return { error: 'path is too long' };
+    changes.path = path;
+  }
+  if (body.targetUrl !== undefined) {
+    const targetUrl = nullableText(body.targetUrl);
+    const blocked = targetUrlError(targetUrl);
+    if (blocked) return { error: blocked };
+    changes.targetUrl = targetUrl;
+  }
+  if (body.previewField !== undefined) {
+    changes.previewField = nullableText(body.previewField);
+  }
+  if (body.active !== undefined) {
+    if (typeof body.active !== 'boolean') return { error: 'active must be a boolean' };
+    changes.active = body.active;
+  }
+  return { changes };
+}
+
+async function requestCounts() {
+  const result = await sql(
+    'SELECT webhook_id, COUNT(*)::int AS count FROM webhook_requests GROUP BY webhook_id'
+  );
+  return new Map(result.rows.map((row) => [Number(row.webhook_id), Number(row.count)]));
+}
+
+async function startServer() {
+  const app = express();
+  app.set('trust proxy', 1);
+  app.disable('x-powered-by');
+  app.use(requireAuth);
+
+  app.get('/up', (_req, res) => {
+    res.status(200).json({ ok: true });
+  });
+
+  app.use('/api', express.json({ limit: '1mb' }));
+
+  app.use('/webhook', express.raw({ type: () => true, limit: '10mb' }), async (req, res) => {
+    // Mounted at /webhook, so req.path is the remainder (/github, not /webhook/github).
+    const webhookPath = req.path.replace(/^\/+|\/+$/g, '');
+    if (!webhookPath) {
+      return res.status(200).json({
+        message: 'Webhook path is required',
+        timestamp: new Date().toISOString(),
+      });
+    }
+    if (webhookPath.length > 200) {
+      return res.status(200).json({
+        message: 'Webhook path is too long',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    try {
+      const webhook = await findOrCreateWebhook(webhookPath);
+      let relayStatus = null;
+      let relayResponse = null;
+      let forwarded = false;
+      let forwardStatus = null;
+
+      if (webhook.active && webhook.targetUrl) {
+        const result = await forwardWebhook(req, webhook.targetUrl);
+        relayStatus = result.relayStatus;
+        relayResponse = result.relayResponse;
+        forwarded = result.success;
+        forwardStatus = result.status;
+      }
+
+      await storeWebhookRequest(req, webhook, relayStatus, relayResponse);
+
+      if (webhook.active && webhook.targetUrl) {
+        return res.status(200).json({
+          message: forwarded ? 'Webhook received and forwarded' : 'Webhook received but forwarding failed',
+          timestamp: new Date().toISOString(),
+          forwarded,
+          ...(forwarded ? { forward_status: forwardStatus } : {}),
+        });
+      }
+
+      const note = webhook.active
+        ? 'No target URL configured for this webhook'
+        : 'Webhook is inactive';
+      return res.status(200).json({
+        message: 'Webhook received',
+        timestamp: new Date().toISOString(),
+        note,
+      });
+    } catch (error) {
+      console.error('Failed to process webhook:', error);
+      return res.status(200).json({
+        message: 'Webhook received but could not be stored',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
+  app.get('/api/webhooks', async (_req, res) => {
+    try {
+      const rows = await Webhook.orderBy('created_at', 'DESC').all();
+      const webhooks = loadAll(Webhook, rows);
+      const counts = await requestCounts();
+      res.json(webhooks.map((webhook) => serializeWebhook(webhook, counts.get(webhook.id) || 0)));
+    } catch (error) {
+      console.error('Failed to list webhooks:', error);
+      publicError(res, 500, 'Failed to list webhooks');
+    }
+  });
+
+  app.get('/api/webhooks/:id', async (req, res) => {
+    const id = parseId(req.params.id);
+    if (!id) return publicError(res, 400, 'Invalid webhook id');
+
+    try {
+      const webhook = await Webhook.find(id);
+      if (!webhook) return publicError(res, 404, 'Webhook not found');
+      const countResult = await sql(
+        'SELECT COUNT(*)::int AS count FROM webhook_requests WHERE webhook_id = ?',
+        [id]
+      );
+      const requestCount = Number(countResult.rows[0]?.count || 0);
+      res.json(serializeWebhook(webhook, requestCount));
+    } catch (error) {
+      console.error('Failed to load webhook:', error);
+      publicError(res, 500, 'Failed to load webhook');
+    }
+  });
+
+  app.post('/api/webhooks', async (req, res) => {
+    const path = nullableText(req.body?.path);
+    if (!path) return publicError(res, 400, 'path is required');
+    if (path.length > 200) return publicError(res, 400, 'path is too long');
+
+    const targetUrl = nullableText(req.body?.targetUrl);
+    const blocked = targetUrlError(targetUrl);
+    if (blocked) return publicError(res, 400, blocked);
+
+    try {
+      const webhook = await Webhook.create({
+        path,
+        targetUrl,
+        previewField: nullableText(req.body?.previewField),
+        active: true,
+      });
+      res.status(201).json(serializeWebhook(webhook, 0));
+    } catch (error) {
+      if (isUniqueViolation(error)) return publicError(res, 409, 'Webhook path already exists');
+      console.error('Failed to create webhook:', error);
+      publicError(res, 500, 'Failed to create webhook');
+    }
+  });
+
+  app.put('/api/webhooks/:id', async (req, res) => {
+    const id = parseId(req.params.id);
+    if (!id) return publicError(res, 400, 'Invalid webhook id');
+
+    const { error, changes } = webhookChanges(req.body || {});
+    if (error) return publicError(res, 400, error);
+    if (Object.keys(changes).length === 0) return publicError(res, 400, 'No changes provided');
+
+    try {
+      const webhook = await Webhook.find(id);
+      if (!webhook) return publicError(res, 404, 'Webhook not found');
+      await webhook.update(changes);
+      const countResult = await sql(
+        'SELECT COUNT(*)::int AS count FROM webhook_requests WHERE webhook_id = ?',
+        [id]
+      );
+      res.json(serializeWebhook(webhook, Number(countResult.rows[0]?.count || 0)));
+    } catch (updateError) {
+      if (isUniqueViolation(updateError)) return publicError(res, 409, 'Webhook path already exists');
+      console.error('Failed to update webhook:', updateError);
+      publicError(res, 500, 'Failed to update webhook');
+    }
+  });
+
+  app.delete('/api/webhooks/:id/requests', async (req, res) => {
+    const id = parseId(req.params.id);
+    if (!id) return publicError(res, 400, 'Invalid webhook id');
+
+    try {
+      const webhook = await Webhook.find(id);
+      if (!webhook) return publicError(res, 404, 'Webhook not found');
+      const result = await execute('DELETE FROM webhook_requests WHERE webhook_id = ?', [id]);
+      res.json({ message: `Deleted ${result.rowCount || 0} requests` });
+    } catch (error) {
+      console.error('Failed to clear webhook requests:', error);
+      publicError(res, 500, 'Failed to clear requests');
+    }
+  });
+
+  app.delete('/api/webhooks/:id', async (req, res) => {
+    const id = parseId(req.params.id);
+    if (!id) return publicError(res, 400, 'Invalid webhook id');
+
+    try {
+      const webhook = await Webhook.find(id);
+      if (!webhook) return publicError(res, 404, 'Webhook not found');
+      await execute('DELETE FROM webhook_requests WHERE webhook_id = ?', [id]);
+      await webhook.destroy();
+      res.json({ message: 'Webhook deleted successfully' });
+    } catch (error) {
+      console.error('Failed to delete webhook:', error);
+      publicError(res, 500, 'Failed to delete webhook');
+    }
+  });
+
+  app.get('/api/requests', async (req, res) => {
+    try {
+      const limit = boundedInt(req.query.limit, 100, 1, 500);
+      const offset = boundedInt(req.query.offset, 0, 0, 1_000_000);
+      let webhookId;
+      if (req.query.webhookId !== undefined && req.query.webhookId !== '') {
+        webhookId = parseId(req.query.webhookId);
+        if (!webhookId) return publicError(res, 400, 'Invalid webhookId');
+      }
+
+      let query = WebhookRequest.orderBy('timestamp', 'DESC').limit(limit).offset(offset);
+      if (webhookId) query = query.where({ webhook_id: webhookId });
+      const requests = loadAll(WebhookRequest, await query.all());
+
+      const webhooks = new Map();
+      for (const webhookIdValue of new Set(requests.map((request) => request.webhookId))) {
+        const webhook = await Webhook.find(webhookIdValue);
+        if (webhook) webhooks.set(webhookIdValue, webhook);
+      }
+
+      res.json(requests.map((request) => serializeRequest(request, webhooks.get(request.webhookId) || null)));
+    } catch (error) {
+      console.error('Failed to list requests:', error);
+      publicError(res, 500, 'Failed to list requests');
+    }
+  });
+
   app.get('/api/requests/:id', async (req, res) => {
-  try {
-    const request = await WebhookRequest.find(parseInt(req.params.id));
-    
-    if (!request) {
-      return res.status(404).json({ error: 'Request not found' });
+    const id = parseId(req.params.id);
+    if (!id) return publicError(res, 400, 'Invalid request id');
+
+    try {
+      const request = await WebhookRequest.find(id);
+      if (!request) return publicError(res, 404, 'Request not found');
+      const webhook = await Webhook.find(request.webhookId);
+      res.json(serializeRequest(request, webhook));
+    } catch (error) {
+      console.error('Failed to load request:', error);
+      publicError(res, 500, 'Failed to load request');
     }
-    
-    const webhook = await Webhook.find(request.webhook_id);
-    
-    // Parse JSON strings and map fields
-    const parsedRequest = {
-      id: request.id,
-      method: request.method,
-      url: request.url,
-      headers: JSON.parse(request.headers || '{}'),
-      body: request.body,
-      queryParams: JSON.parse(request.query_params || '{}'),
-      timestamp: request.timestamp,
-      ipAddress: request.ip_address,
-      userAgent: request.user_agent,
-      relayStatus: request.relay_status,
-      relayResponse: request.relay_response,
-      webhookId: request.webhook_id,
-      webhook: webhook ? {
-        id: webhook.id,
-        path: webhook.path,
-        targetUrl: webhook.targetUrl,
-        active: webhook.active
-      } : null,
-      // Legacy fields for backward compatibility
-      query_params: JSON.parse(request.query_params || '{}'),
-      ip_address: request.ip_address,
-      user_agent: request.user_agent
-    };
-    
-    res.json(parsedRequest);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-  // Legacy URL mappings endpoints (return error as urlMapping table no longer exists)
-  app.get('/api/mappings', async (req, res) => {
-    res.status(410).json({ error: 'URL mappings have been replaced by webhooks API' });
   });
 
-  app.post('/api/mappings', async (req, res) => {
-    res.status(410).json({ error: 'URL mappings have been replaced by webhooks API. Use /api/webhooks instead' });
-  });
-
-  app.put('/api/mappings/:id', async (req, res) => {
-    res.status(410).json({ error: 'URL mappings have been replaced by webhooks API. Use /api/webhooks instead' });
-  });
-
-  app.delete('/api/mappings/:id', async (req, res) => {
-    res.status(410).json({ error: 'URL mappings have been replaced by webhooks API. Use /api/webhooks instead' });
-  });
-
-  // Delete webhook request
   app.delete('/api/requests/:id', async (req, res) => {
-  try {
-    const request = await WebhookRequest.find(parseInt(req.params.id));
-    
-    if (!request) {
-      return res.status(404).json({ error: 'Request not found' });
-    }
-    
-    await request.destroy();
-    
-    res.json({ message: 'Request deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+    const id = parseId(req.params.id);
+    if (!id) return publicError(res, 400, 'Invalid request id');
 
-  // Clear all webhook requests
-  app.delete('/api/requests', async (req, res) => {
-  try {
-    const requests = await WebhookRequest.all();
-    let count = 0;
-    
-    for (const request of requests) {
+    try {
+      const request = await WebhookRequest.find(id);
+      if (!request) return publicError(res, 404, 'Request not found');
       await request.destroy();
-      count++;
+      res.json({ message: 'Request deleted successfully' });
+    } catch (error) {
+      console.error('Failed to delete request:', error);
+      publicError(res, 500, 'Failed to delete request');
     }
-    
-    res.json({ message: `Deleted ${count} requests` });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+  });
 
-  // Resend a webhook request
+  app.delete('/api/requests', async (_req, res) => {
+    try {
+      const result = await execute('DELETE FROM webhook_requests');
+      res.json({ message: `Deleted ${result.rowCount || 0} requests` });
+    } catch (error) {
+      console.error('Failed to clear requests:', error);
+      publicError(res, 500, 'Failed to clear requests');
+    }
+  });
+
   app.post('/api/requests/:id/resend', async (req, res) => {
-  try {
-    // Get the original request with webhook information
-    const request = await WebhookRequest.find(parseInt(req.params.id));
+    const id = parseId(req.params.id);
+    if (!id) return publicError(res, 400, 'Invalid request id');
 
-    if (!request) {
-      return res.status(404).json({ error: 'Request not found' });
+    try {
+      const request = await WebhookRequest.find(id);
+      if (!request) return publicError(res, 404, 'Request not found');
+
+      const webhook = await Webhook.find(request.webhookId);
+      if (!webhook) return publicError(res, 400, 'No webhook found for this request');
+      if (!webhook.active) return publicError(res, 400, 'Webhook is not active');
+      if (!webhook.targetUrl) return publicError(res, 400, 'No target URL configured for this webhook');
+
+      const headers = parseJson(request.headers, {});
+      const query = parseJson(request.queryParams, {});
+      const mockReq = {
+        method: request.method,
+        headers,
+        query,
+        rawBody: Buffer.from(request.body || '', 'utf8'),
+        get: (name) => headers[String(name).toLowerCase()],
+      };
+      const result = await forwardWebhook(mockReq, webhook.targetUrl);
+
+      await WebhookRequest.create({
+        method: request.method,
+        url: request.url,
+        headers: request.headers,
+        body: request.body,
+        queryParams: request.queryParams,
+        timestamp: new Date(),
+        ipAddress: request.ipAddress,
+        userAgent: request.userAgent,
+        relayStatus: result.relayStatus,
+        relayResponse: result.relayResponse,
+        webhookId: request.webhookId,
+      });
+
+      res.json({
+        message: 'Request resent',
+        success: result.success,
+        status: result.status,
+      });
+    } catch (error) {
+      console.error('Failed to resend request:', error);
+      publicError(res, 500, 'Failed to resend request');
     }
+  });
 
-    const webhook = await Webhook.find(request.webhook_id);
-    
-    if (!webhook) {
-      return res.status(400).json({ error: 'No webhook found for this request' });
+  app.use((error, req, res, next) => {
+    if (res.headersSent) return next(error);
+    console.error('Request error:', error);
+    const path = requestPath(req);
+    if (path === '/webhook' || path.startsWith('/webhook/')) {
+      return res.status(200).json({
+        message: 'Webhook received but could not be processed',
+        timestamp: new Date().toISOString(),
+      });
     }
+    const status = error?.type === 'entity.parse.failed' ? 400 : 500;
+    return publicError(res, status, status === 400 ? 'Invalid JSON body' : 'Internal server error');
+  });
 
-    if (!webhook.active) {
-      return res.status(400).json({ error: 'Webhook is not active' });
-    }
-
-    if (!webhook.targetUrl) {
-      return res.status(400).json({ error: 'No target URL configured for this webhook' });
-    }
-
-    // Recreate the request object for forwarding
-    const mockReq = {
-      method: request.method,
-      originalUrl: request.url,
-      headers: JSON.parse(request.headers || '{}'),
-      body: request.body ? (request.body.startsWith('{') ? JSON.parse(request.body) : request.body) : {},
-      query: JSON.parse(request.query_params || '{}'),
-      ip: request.ip_address,
-      get: (header) => JSON.parse(request.headers || '{}')[header.toLowerCase()]
-    };
-
-    // Forward the webhook
-    const result = await forwardWebhook(mockReq, webhook.targetUrl);
-    
-    // Update the original request with new relay information
-    await request.update({
-      relay_status: result.relayStatus,
-      relay_response: result.relayResponse
-    });
-    
-    res.json({
-      message: 'Request resent',
-      success: result.success,
-      status: result.status,
-      error: result.error || null
-    });
-
-  } catch (err) {
-    console.error('Resend error:', err);
-    res.status(500).json({ error: 'Failed to resend request' });
-  }
-});
-
-  // Setup Vite middleware for development (after all API routes)
   if (isDevelopment) {
     const { createServer } = await import('vite');
-    
     const vite = await createServer({
       server: { middlewareMode: true },
-      appType: 'spa'
+      appType: 'spa',
     });
-    
     app.use(vite.middlewares);
   } else {
-    // In production, serve static frontend files
     app.use(express.static('public'));
-  }
-
-  // Catch-all handler: send back React's index.html file for any non-API routes
-  if (!isDevelopment) {
-    app.get('*', (req, res) => {
+    app.get('*', (_req, res) => {
       res.sendFile('index.html', { root: 'public' });
     });
   }
 
   app.listen(PORT, () => {
     console.log(`Webhook server running on port ${PORT}`);
+    if (!authPassword) {
+      console.log('AUTH_PASSWORD is not set; the management UI is open');
+    }
   });
 }
 
-// Start the server
-startServer().catch(console.error);
+startServer().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info';
@@ -16,7 +16,7 @@ interface ToastItemProps {
   onRemove: (id: string) => void;
 }
 
-const ToastItem: React.FC<ToastItemProps> = ({ toast, onRemove }) => {
+function ToastItem({ toast, onRemove }: ToastItemProps) {
   useEffect(() => {
     const timer = setTimeout(() => {
       onRemove(toast.id);
@@ -70,14 +70,14 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onRemove }) => {
       </button>
     </div>
   );
-};
+}
 
 interface ToastContainerProps {
   toasts: Toast[];
   onRemove: (id: string) => void;
 }
 
-export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove }) => {
+export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   return (
     <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
       {toasts.map((toast) => (
@@ -85,32 +85,31 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove
       ))}
     </div>
   );
-};
+}
 
-// Toast context and hook
 export const useToast = () => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const addToast = (toast: Omit<Toast, 'id'>) => {
-    const id = Math.random().toString(36).substr(2, 9);
+  const addToast = useCallback((toast: Omit<Toast, 'id'>) => {
+    const id = Math.random().toString(36).slice(2, 11);
     setToasts((prev) => [...prev, { ...toast, id }]);
-  };
+  }, []);
 
-  const removeToast = (id: string) => {
+  const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
+  }, []);
 
-  const success = (title: string, message?: string) => {
+  const success = useCallback((title: string, message?: string) => {
     addToast({ type: 'success', title, message });
-  };
+  }, [addToast]);
 
-  const error = (title: string, message?: string) => {
+  const error = useCallback((title: string, message?: string) => {
     addToast({ type: 'error', title, message });
-  };
+  }, [addToast]);
 
-  const info = (title: string, message?: string) => {
+  const info = useCallback((title: string, message?: string) => {
     addToast({ type: 'info', title, message });
-  };
+  }, [addToast]);
 
   return {
     toasts,

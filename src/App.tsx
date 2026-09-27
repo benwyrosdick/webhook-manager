@@ -3,6 +3,7 @@ import WebhookList from './components/WebhookList';
 import WebhookDetail from './components/WebhookDetail';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import { Activity } from 'lucide-react';
+import { webhookUrl } from './lib/public-url';
 
 function App() {
   return (
@@ -25,7 +26,7 @@ function App() {
                     <CardContent>
                       <div className="space-y-3">
                         <p className="text-sm text-gray-700">
-                          <strong className="text-gray-900">Receive webhooks:</strong> POST to <code className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-mono text-xs">{import.meta.env.VITE_API_BASE}/webhook/your-path</code>
+                          <strong className="text-gray-900">Receive webhooks:</strong> POST to <code className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-mono text-xs">{webhookUrl('your-path')}</code>
                         </p>
                         <p className="text-sm text-gray-700">
                           <strong className="text-gray-900">Forward webhooks:</strong> Configure target URLs for your webhooks to automatically forward incoming requests

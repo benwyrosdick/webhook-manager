@@ -7,7 +7,7 @@ import { api } from '../../services/api'
 import type { Webhook } from '../../types/webhook'
 
 // Mock the API service
-vi.mock('../../services/api', () => ({
+vi.mock('@/services/api', () => ({
   api: {
     getWebhooks: vi.fn(),
     createWebhook: vi.fn(),
@@ -15,18 +15,6 @@ vi.mock('../../services/api', () => ({
     deleteWebhook: vi.fn(),
   }
 }))
-
-// Mock React Router
-const mockNavigate = vi.fn()
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom')
-  return {
-    ...actual,
-    Link: ({ children, to }: { children: React.ReactNode, to: string }) => (
-      <a href={to} onClick={() => mockNavigate(to)}>{children}</a>
-    )
-  }
-})
 
 // Mock environment variable
 vi.stubEnv('VITE_API_BASE', 'http://localhost:3000')

@@ -2,8 +2,14 @@ import { Model } from 'js-record';
 import adapter from '../db/connection.js';
 
 class WebhookRequest extends Model {
-  static tableName = 'webhook_requests';
-  
+  // This table stores its own timestamp column and has no created_at/updated_at.
+  static config = {
+    tableName: 'webhook_requests',
+    primaryKey: 'id',
+    timestamps: false,
+    mapAttributes: true,
+  };
+
   id!: number;
   method!: string;
   url!: string;
@@ -18,10 +24,6 @@ class WebhookRequest extends Model {
   webhookId!: number;
 }
 
-// Set the database adapter
 Model.setAdapter(adapter);
-
-// Define associations (after all models are loaded)
-// WebhookRequest.belongsTo('webhook', () => import('./Webhook.js').then(m => m.default as typeof Model));
 
 export default WebhookRequest;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import type { Webhook, WebhookRequest } from '../types/webhook';
 import { api } from '../services/api';
@@ -10,6 +10,7 @@ import { Modal } from './ui/modal';
 import { useToast, ToastContainer } from './ui/toast';
 import { ArrowLeft, Settings, Eye, RotateCcw, Trash2, RadioTower, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { CodeHighlighter } from './SyntaxHighlighter';
+import { webhookUrl } from '../lib/public-url';
 
 export default function WebhookDetail() {
   const { id } = useParams<{ id: string }>();
@@ -22,7 +23,7 @@ export default function WebhookDetail() {
   const [requestsLoading, setRequestsLoading] = useState(false);
   const { toasts, removeToast, success: successToast, error: errorToast } = useToast();
 
-  const fetchWebhook = async () => {
+  const fetchWebhook = useCallback(async () => {
     if (!webhookId) return;
     
     try {
@@ -32,42 +33,51 @@ export default function WebhookDetail() {
     } catch (error) {
       console.error('Failed to fetch webhook:', error);
     }
-  };
+  }, [webhookId]);
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async (silent = false) => {
     if (!webhookId) return;
     
     try {
-      setRequestsLoading(true);
+      if (!silent) setRequestsLoading(true);
       const data = await api.getRequests(100, 0, webhookId);
       setRequests(data);
     } catch (error) {
       console.error('Failed to fetch requests:', error);
+      if (!silent) errorToast('Could not load requests', 'Failed to fetch requests');
     } finally {
-      setRequestsLoading(false);
+      if (!silent) setRequestsLoading(false);
     }
-  };
+  }, [webhookId, errorToast]);
 
   useEffect(() => {
-    const fetchData = async () => {
+    let active = true;
+
+    const load = async () => {
       setLoading(true);
-      await Promise.all([fetchWebhook(), fetchRequests()]);
-      setLoading(false);
+      await Promise.all([fetchWebhook(), fetchRequests(false)]);
+      if (active) setLoading(false);
     };
-    
-    fetchData();
-  }, [webhookId]);
+
+    load();
+    const timer = setInterval(() => {
+      fetchWebhook();
+      fetchRequests(true);
+    }, 5000);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [fetchWebhook, fetchRequests]);
 
   const handleViewRequest = async (requestId: number) => {
-    console.log('handleViewRequest called with requestId:', requestId);
     try {
-      console.log('Fetching request details...');
       const request = await api.getRequest(requestId);
-      console.log('Request details fetched:', request);
       setSelectedRequest(request);
-      console.log('selectedRequest state updated');
     } catch (error) {
       console.error('Failed to fetch request details:', error);
+      errorToast('Could not load request', 'Failed to fetch request details');
     }
   };
 
@@ -75,8 +85,7 @@ export default function WebhookDetail() {
     try {
       await api.resendRequest(requestId);
       successToast('Request resent successfully', 'The webhook request has been resent to the target URL');
-      // Refresh the requests to see updated relay status
-      await fetchRequests();
+      await fetchRequests(true);
     } catch (error) {
       console.error('Failed to resend request:', error);
       errorToast('Resend failed', 'Failed to resend the webhook request to the target URL');
@@ -88,9 +97,24 @@ export default function WebhookDetail() {
     
     try {
       await api.deleteRequest(requestId);
-      await fetchRequests();
+      await fetchRequests(true);
     } catch (error) {
       console.error('Failed to delete request:', error);
+      errorToast('Could not delete request', 'Failed to delete the webhook request');
+    }
+  };
+
+  const handleClearRequests = async () => {
+    if (!webhookId) return;
+    if (!confirm('Delete all requests for this webhook?')) return;
+
+    try {
+      await api.clearWebhookRequests(webhookId);
+      successToast('Requests cleared', 'Stored requests for this webhook were deleted');
+      await fetchRequests(true);
+    } catch (error) {
+      console.error('Failed to clear requests:', error);
+      errorToast('Clear failed', 'Failed to delete webhook requests');
     }
   };
 
@@ -195,7 +219,7 @@ export default function WebhookDetail() {
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Webhook: {webhook.path}</h1>
           <p className="text-gray-600 text-sm">
-            {import.meta.env.VITE_API_BASE}/webhook/{webhook.path}
+            {webhookUrl(webhook.path)}
           </p>
         </div>
       </div>
@@ -251,12 +275,17 @@ export default function WebhookDetail() {
       {/* Requests Card */}
       <Card className="bg-white/80 backdrop-blur-sm shadow-lg border-0 ring-1 ring-blue-100">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-gray-800">
-            <div className="p-1 bg-blue-100 rounded-md">
-              <RadioTower className="h-4 w-4 text-blue-600" />
-            </div>
-            Recent Requests ({requests.length})
-          </CardTitle>
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle className="flex items-center gap-2 text-gray-800">
+              <div className="p-1 bg-blue-100 rounded-md">
+                <RadioTower className="h-4 w-4 text-blue-600" />
+              </div>
+              Recent Requests ({requests.length})
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={handleClearRequests}>
+              Clear requests
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {requestsLoading ? (
@@ -309,6 +338,7 @@ export default function WebhookDetail() {
                           onClick={() => handleViewRequest(request.id)}
                           variant="ghost"
                           size="sm"
+                          aria-label="View request"
                           className="hover:bg-blue-50 hover:text-blue-600"
                         >
                           <Eye className="h-4 w-4" />
@@ -318,6 +348,7 @@ export default function WebhookDetail() {
                             onClick={() => handleResendRequest(request.id)}
                             variant="ghost"
                             size="sm"
+                            aria-label="Resend request"
                             className="hover:bg-green-50 hover:text-green-600"
                           >
                             <RotateCcw className="h-4 w-4" />
@@ -327,6 +358,7 @@ export default function WebhookDetail() {
                           onClick={() => handleDeleteRequest(request.id)}
                           variant="ghost"
                           size="sm"
+                          aria-label="Delete request"
                           className="hover:bg-red-50 hover:text-red-600"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -392,13 +424,7 @@ export default function WebhookDetail() {
               <div>
                 <label className="text-sm font-medium text-gray-700">Body</label>
                 <div className="mt-1">
-                  <CodeHighlighter 
-                    language="json" 
-                    code={selectedRequest.body.startsWith('{') ? 
-                      JSON.stringify(JSON.parse(selectedRequest.body), null, 2) : 
-                      selectedRequest.body
-                    } 
-                  />
+                  <CodeHighlighter language="json" code={selectedRequest.body} />
                 </div>
               </div>
             )}
@@ -407,13 +433,7 @@ export default function WebhookDetail() {
               <div>
                 <label className="text-sm font-medium text-gray-700">Relay Response</label>
                 <div className="mt-1">
-                  <CodeHighlighter 
-                    language="json" 
-                    code={selectedRequest.relayResponse.startsWith('{') ? 
-                      JSON.stringify(JSON.parse(selectedRequest.relayResponse), null, 2) : 
-                      selectedRequest.relayResponse
-                    } 
-                  />
+                  <CodeHighlighter language="json" code={selectedRequest.relayResponse} />
                 </div>
               </div>
             )}

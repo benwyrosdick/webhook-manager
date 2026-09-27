@@ -12,10 +12,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build frontend with secret
-RUN --mount=type=secret,id=VITE_API_BASE \
-    export VITE_API_BASE=$(cat /run/secrets/VITE_API_BASE) && \
-    bun run build
+RUN bun run build
 
 # Production image
 FROM base AS runner
@@ -30,6 +27,5 @@ COPY --from=builder /app/src ./src
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./
 
-# Run database migrations and start server
-CMD ["sh", "-c", "bun server.js"]
+CMD ["bun", "server.js"]
 

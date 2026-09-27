@@ -20,7 +20,7 @@ A modern unified web application for receiving, viewing, and forwarding webhooks
 - **Resend Functionality**: Resend any webhook request to its target endpoint (when configured)
 - **Collect-Only Mode**: Create webhooks without target URLs for pure data collection
 - **Reliable Webhook Handling**: Always returns 200 status to webhook providers, even on forwarding errors
-- **Comprehensive Testing**: Full test suite with 160+ tests covering components, API, and integration
+- **Tests**: Vitest coverage for the UI, API client, and URL validation
 
 ### User Interface
 - **Modern Design**: Gradient backgrounds with glass morphism effects
@@ -33,8 +33,7 @@ A modern unified web application for receiving, viewing, and forwarding webhooks
 
 ### Prerequisites
 
-- Node.js (v20.14.0 or higher)
-- bun package manager
+- [Bun](https://bun.sh) (the server uses Bun's PostgreSQL client)
 - PostgreSQL database (local or hosted)
 
 ### Installation
@@ -67,32 +66,22 @@ createdb webhook_manager
 DATABASE_URL="postgresql://yourusername@localhost:5432/webhook_manager"
 ```
 
-4. Initialize the database:
-
-The database tables should already exist from previous Prisma migrations. If you're setting up a fresh database, you'll need to create the tables manually using SQL or migrate from the Prisma schema history.
+4. Start the app. On startup it creates `webhooks` and `webhook_requests` if they are missing.
 
 ### Running the Application
 
-#### Development (Recommended)
 ```bash
-# Start both frontend and backend with hot reload
+# One process serves the API and the frontend, with hot reload
 bun dev
-
-# This runs:
-# - Frontend: http://localhost:8080 (with hot reload)
-# - Backend: http://localhost:3000 (with auto-restart)
-
-# Optional: Start ngrok tunnel for public webhook access
-bun dev:ngrok
 ```
 
-#### Alternative Development (Unified)
-```bash
-# Start unified server (requires manual rebuild after frontend changes)
-bun dev:backend
+Open `http://localhost:3000`. Webhooks are received at `http://localhost:3000/webhook/your-path`.
 
-# Then rebuild frontend when needed:
-bun build
+Set `AUTH_PASSWORD` in `.env` to require a login. Leave it empty while developing locally. In production the server refuses to start without it.
+
+```bash
+# Optional public tunnel
+bun dev:ngrok
 ```
 
 #### Production
@@ -107,14 +96,7 @@ bun start
 
 ### Accessing the Application
 
-**Development:**
-- **Frontend**: `http://localhost:8080` (with hot reload)
-- **Backend API**: `http://localhost:3000`
-- **Webhooks**: `http://localhost:3000/webhook/your-path`
-
-**Production:**
-- **Application**: `http://localhost:3000` (serves both frontend and API)
-- **Public Webhook URL**: Check ngrok output for public URL
+**Development and production** both serve the UI and the API from port 3000. Webhook URLs shown in the UI use the browser's origin, so a deployed host does not need a build-time API URL.
 
 ## Usage
 
@@ -221,7 +203,7 @@ The database uses the following tables:
 - `webhooks` - Stores webhook configurations
 - `webhook_requests` - Stores incoming webhook requests
 
-Schema changes need to be applied manually via SQL or a migration tool.
+A fresh database is created on startup. Later schema changes still need a SQL migration.
 
 ## Project Structure
 
@@ -271,10 +253,13 @@ webhook-manager/
 - `DELETE /api/webhooks/:id` - Delete webhook and cascade delete associated requests
 
 ### Request Management
-- `GET /api/requests` - Get all webhook requests with optional webhook filtering
+- `GET /api/requests` - Get webhook requests, optionally filtered with `webhookId`
 - `GET /api/requests/:id` - Get specific request details
-- `POST /api/requests/:id/resend` - Resend request to target endpoint (if configured)
+- `POST /api/requests/:id/resend` - Forward the stored request again and keep the original delivery
 - `DELETE /api/requests/:id` - Delete specific request
+- `DELETE /api/requests` - Delete every stored request
+- `DELETE /api/webhooks/:id/requests` - Delete requests for one webhook
+- `GET /up` - Health check used by the proxy
 
 ## Technologies Used
 
@@ -289,19 +274,16 @@ webhook-manager/
 ### Backend
 - **Runtime**: Node.js with Express.js
 - **Database**: PostgreSQL with js-record ORM
-- **HTTP Client**: Axios for webhook forwarding
-- **CORS**: Enabled for cross-origin requests
-- **Architecture**: Unified server serving both API and frontend
+- **HTTP Client**: `fetch` for webhook forwarding, preserving the original body
+- **Architecture**: One Bun process serves the API and the frontend
 
 ### Development Tools
 - **Bundler**: Vite with hot module replacement
 - **Package Manager**: bun with unified dependencies
 - **Tunneling**: ngrok for public webhook access
-- **Development Server**: Nodemon for auto-restart
+- **Development Server**: `bun --watch`
 - **Testing**: Vitest with React Testing Library
 - **Database**: js-record ORM for ActiveRecord-style database operations
-- **Environment Variables**: dotenv for secure credential loading
-- **Process Management**: Concurrently for running multiple dev servers
 
 ## Development Features
 
@@ -325,9 +307,9 @@ This application is configured for deployment using [Kamal](https://kamal-deploy
    brew install kamal
    ```
 
-2. **Docker Hub Account** (or another container registry):
-   - Create an account at [Docker Hub](https://hub.docker.com/)
-   - Generate an access token for authentication
+2. **GitHub Container Registry**:
+   - Create a personal access token with `read:packages` and `write:packages`
+   - The image is published to `ghcr.io/benwyrosdick/webhook-manager`
 
 3. **Server Requirements**:
    - A server with Docker installed
@@ -336,17 +318,16 @@ This application is configured for deployment using [Kamal](https://kamal-deploy
 
 ### Configuration
 
-1. **Update `config/deploy.yml`**:
-   - Replace `your-dockerhub-username` with your Docker Hub username
-   - Replace `your-server-ip-or-domain` with your server's IP address or domain
-   - Update the `user` field if you're not using `root`
-   - Adjust the `port.host` if you want to use a different port (default is 3000)
+1. **Update `config/deploy.yml`** if the host, server, or GitHub username changes.
 
 2. **Set up environment secrets**:
    ```bash
    kamal secret set DATABASE_URL postgresql://user:password@host:5432/webhook_manager
-   kamal secret set KAMAL_REGISTRY_PASSWORD your-dockerhub-access-token
+   kamal secret set KAMAL_REGISTRY_PASSWORD your-github-token
+   kamal secret set AUTH_PASSWORD a-long-random-password
    ```
+
+   Sign in to the app with username `admin` and that password. Webhook ingress at `/webhook/...` stays public. The management UI and API require the password.
 
 3. **Configure database**:
    - You can use an external PostgreSQL database
@@ -384,7 +365,7 @@ kamal app details
 kamal app logs -f
 
 # Execute commands in the container
-kamal app exec -- "bun prisma studio"
+kamal app exec -i bash
 
 # Rollback to previous version
 kamal rollback
@@ -401,11 +382,11 @@ kamal remove
 
 ### Database Setup
 
-The database tables should already exist. If deploying to a fresh database, you'll need to create the necessary tables using SQL scripts or by exporting from an existing database.
+Tables are created on startup when they do not already exist.
 
 ### Troubleshooting
 
-- **Build failures**: Check Docker Hub credentials and network connectivity
+- **Build failures**: Check the GitHub token has `write:packages` and that `ghcr.io` is reachable
 - **Database connection errors**: Verify `DATABASE_URL` secret is set correctly
 - **Port conflicts**: Change `port.host` in `config/deploy.yml` if port 3000 is in use
 - **Permission issues**: Ensure the SSH user has sudo privileges

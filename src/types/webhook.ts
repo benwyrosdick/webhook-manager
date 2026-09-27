@@ -24,13 +24,3 @@ export interface Webhook {
   requests?: WebhookRequest[];
   requestCount?: number;
 }
-
-// Legacy interface for backward compatibility
-export interface URLMapping {
-  id: number;
-  webhook_path: string;
-  target_url: string;
-  active: boolean;
-  created_at: string;
-  updated_at: string;
-}

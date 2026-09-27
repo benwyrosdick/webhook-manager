@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { api } from '../api'
-import type { WebhookRequest, Webhook, URLMapping } from '../../types/webhook'
+import type { WebhookRequest, Webhook } from '../../types/webhook'
 
 // Mock fetch
 const mockFetch = vi.fn()
 globalThis.fetch = mockFetch
+
+vi.stubEnv('VITE_API_BASE', 'http://localhost:3000')
 
 const API_BASE = 'http://localhost:3000'
 
@@ -130,105 +132,6 @@ describe('API Service', () => {
       })
 
       await expect(api.getRequest(999)).rejects.toThrow('Failed to fetch request')
-    })
-  })
-
-  describe('URL Mappings', () => {
-    it('should fetch mappings', async () => {
-      const mockMappings: URLMapping[] = [
-        {
-          id: 1,
-          webhook_path: 'test',
-          target_url: 'https://example.com/webhook',
-          active: true,
-          created_at: '2023-01-01T00:00:00Z',
-          updated_at: '2023-01-01T00:00:00Z'
-        }
-      ]
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockMappings
-      })
-
-      const result = await api.getMappings()
-
-      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/api/mappings`)
-      expect(result).toEqual(mockMappings)
-    })
-
-    it('should create a mapping', async () => {
-      const mockMapping: URLMapping = {
-        id: 1,
-        webhook_path: 'test',
-        target_url: 'https://example.com/webhook',
-        active: true,
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z'
-      }
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockMapping
-      })
-
-      const result = await api.createMapping('test', 'https://example.com/webhook')
-
-      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/api/mappings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          webhook_path: 'test',
-          target_url: 'https://example.com/webhook'
-        })
-      })
-      expect(result).toEqual(mockMapping)
-    })
-
-    it('should update a mapping', async () => {
-      const updateData = {
-        webhook_path: 'updated-test',
-        target_url: 'https://updated.com/webhook',
-        active: false
-      }
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true
-      })
-
-      await api.updateMapping(1, updateData)
-
-      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/api/mappings/1`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updateData)
-      })
-    })
-
-    it('should delete a mapping', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true
-      })
-
-      await api.deleteMapping(1)
-
-      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/api/mappings/1`, {
-        method: 'DELETE'
-      })
-    })
-
-    it('should throw error when mapping creation fails', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 409
-      })
-
-      await expect(api.createMapping('test', 'https://example.com/webhook'))
-        .rejects.toThrow('Failed to create mapping')
     })
   })
 
@@ -418,6 +321,18 @@ describe('API Service', () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(updateData)
+      })
+    })
+
+    it('should clear requests for one webhook', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true
+      })
+
+      await api.clearWebhookRequests(4)
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/api/webhooks/4/requests`, {
+        method: 'DELETE'
       })
     })
 

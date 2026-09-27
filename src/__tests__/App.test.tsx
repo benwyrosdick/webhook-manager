@@ -3,11 +3,11 @@ import { render, screen } from '@testing-library/react'
 import App from '../App'
 
 // Mock child components
-vi.mock('../components/WebhookList', () => ({
+vi.mock('@/components/WebhookList', () => ({
   default: () => <div data-testid="webhook-list">Webhook List Component</div>
 }))
 
-vi.mock('../components/WebhookDetail', () => ({
+vi.mock('@/components/WebhookDetail', () => ({
   default: () => <div data-testid="webhook-detail">Webhook Detail Component</div>
 }))
 
