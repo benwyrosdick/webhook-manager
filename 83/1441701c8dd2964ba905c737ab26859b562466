@@ -1,0 +1,45 @@
+src/db/schema.ts
+  s_94c2de074881b7::t_b8b988efa3e952 1-37
+src/models/WebhookRequest.ts
+  s_94c2de074881b7::t_ddf4688b1ba34c 5-12
+server.js
+  s_94c2de074881b7::t_9ec8b0756e65a7 1,4,8-28,30-62,64-76,78-80,82-161,163-192,195-198,201-216,219-224,226-231,234-237,239,242-345,347-348,351-363,367-369,371-377,379,381-383,385-398,401-420,422,425-444,446-459,461,464-475,477,480-487,489-491,493-497,499-503,506-508,510-518,522-523,525-527,529-532,534,536-542,544,546-548,550-582,584-591,593,595-603,618
+  s_94c2de074881b7::t_3481583d988a83 604-606
+src/lib/__tests__/target-url.test.ts
+  s_94c2de074881b7::t_d94d2f4e8c4fb1 1-22
+vite.config.ts
+  s_94c2de074881b7::t_386c3151afe23a 1
+src/lib/target-url.ts
+  s_94c2de074881b7::t_1e3790d3909693 1-4,11-12,14-15,17-22,25-49,51-55
+  s_94c2de074881b7::t_3b7f2979eff96a 5-10,13,16,23-24,50
+src/db/database-url.ts
+  s_94c2de074881b7::t_04f3d80316710c 1-41
+src/db/connection.ts
+  s_94c2de074881b7::t_b99162c20063df 2-3,5,8-9,13
+src/lib/public-url.ts
+  s_94c2de074881b7::t_c4ba4cd6e0d3d9 1-15
+tsconfig.server.json
+  s_94c2de074881b7::t_56a9ef05372060 5,8-10,20,22
+src/models/Webhook.ts
+  s_94c2de074881b7::t_e0b97091297f9d 5-11
+.env.example
+  s_94c2de074881b7::t_7b33d43fb5023e 1-2,4-6,8-9
+src/db/__tests__/database-url.test.ts
+  s_94c2de074881b7::t_e4ea1d86a966fe 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "831441701c8dd2964ba905c737ab26859b562466",
+  "prompts": {},
+  "sessions": {
+    "s_94c2de074881b7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0e395-73d3-7d60-91b6-9ddf8996feee",
+        "model": "unknown"
+      },
+      "human_author": "Ben Wyrosdick <ben.wyrosdick@gmail.com>"
+    }
+  }
+}
