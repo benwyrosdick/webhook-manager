@@ -9,6 +9,9 @@ jobs:
   deploy:
     name: Deploy with Kamal
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     
     steps:
       - name: Checkout code
@@ -43,17 +46,17 @@ jobs:
           mkdir -p .kamal
           cat > .kamal/secrets << 'EOF'
           KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
-          VITE_API_BASE=$VITE_API_BASE
           DATABASE_URL=$DATABASE_URL
+          AUTH_PASSWORD=$AUTH_PASSWORD
           EOF
         env:
-          KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
-          VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+          KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
       
       - name: Deploy with Kamal
         run: kamal deploy
         env:
-          KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
-          VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+          KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
